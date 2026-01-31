@@ -1,0 +1,72 @@
+{
+  "name": "@bantai-dev/core",
+  "version": "0.1.0",
+  "description": "TypeScript-first policy evaluation library for rule-based validation and decision-making",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bosquejun/bantai.git",
+    "directory": "packages/bantai"
+  },
+  "homepage": "https://github.com/bosquejun/bantai#readme",
+  "bugs": {
+    "url": "https://github.com/bosquejun/bantai/issues"
+  },
+  "keywords": [
+    "policy-engine",
+    "policy-library",
+    "decision-engine",
+    "rule-engine",
+    "validation-library",
+    "business-rules",
+    "policy-evaluation",
+    "authorization",
+    "access-control",
+    "validation",
+    "zod",
+    "typescript"
+  ],
+  "author": {
+    "name": "Jun",
+    "email": "bosquejun@gmail.com"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsup",
+    "check-types": "tsc --noEmit",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "@bantai-dev/typescript-config": "workspace:*",
+    "@types/ms": "^2.1.0",
+    "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "5.9.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "ms": "^2.1.3",
+    "zod": "^4.3.5"
+  },
+  "peerDependencies": {
+    "zod": "^4.3.5"
+  }
+}
