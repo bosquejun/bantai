@@ -1,135 +1,129 @@
-# Turborepo starter
+# Bantai
 
-This Turborepo starter is maintained by the Turborepo core team.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@bantai-dev/core)](https://www.npmjs.com/package/@bantai-dev/core)
 
-## Using this example
+> TypeScript-first policy evaluation library for rule-based validation and decision-making
 
-Run the following command:
+Bantai is a powerful, type-safe policy evaluation library that enables you to build complex validation and decision-making logic using composable rules and policies. Built with TypeScript and Zod, it provides end-to-end type safety while remaining flexible enough to handle diverse use cases.
 
-```sh
-npx create-turbo@latest
+## Installation
+
+```bash
+npm install @bantai-dev/core zod
+# or
+pnpm add @bantai-dev/core zod
+# or
+yarn add @bantai-dev/core zod
 ```
 
-## What's inside?
+**Note**: `zod` is a peer dependency and must be installed separately.
 
-This Turborepo includes the following packages/apps:
+## Quick Start
 
-### Apps and Packages
+```typescript
+import { z } from 'zod';
+import { defineContext, defineRule, definePolicy, evaluatePolicy, allow, deny } from '@bantai-dev/core';
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@bantai-dev/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@bantai-dev/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@bantai-dev/typescript-config`: `tsconfig.json`s used throughout the monorepo
+// 1. Define context schema
+const ageContext = defineContext(
+  z.object({
+    age: z.number().min(0).max(150),
+  })
+);
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+// 2. Define a rule
+const ageVerificationRule = defineRule(ageContext, 'age-verification', async (input) => {
+  if (input.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18 or older' });
+});
 
-### Utilities
+// 3. Define a policy
+const agePolicy = definePolicy(ageContext, 'age-verification-policy', [ageVerificationRule], {
+  defaultStrategy: 'preemptive',
+});
 
-This Turborepo has some additional tools already setup for you:
+// 4. Evaluate policy
+const result = await evaluatePolicy(agePolicy, { age: 25 });
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+console.log(result.decision); // 'allow' or 'deny'
+console.log(result.violatedRules); // Array of violations
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Packages
+
+This monorepo contains the following packages:
+
+- **[@bantai-dev/core](./packages/core/)** - Core policy evaluation library
+- **[@bantai-dev/eslint-config](./packages/eslint-config/)** - Shared ESLint configurations
+- **[@bantai-dev/typescript-config](./packages/typescript-config/)** - Shared TypeScript configurations
+
+## Documentation
+
+For detailed documentation, API reference, and examples, see the [core package README](./packages/core/README.md).
+
+## Project Structure
 
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+bantai-dev/
+├── packages/
+│   ├── core/              # Main policy evaluation library
+│   ├── eslint-config/     # ESLint configurations
+│   └── typescript-config/ # TypeScript configurations
+├── apps/                  # Applications (if any)
+└── turbo.json            # Turborepo configuration
 ```
 
-### Develop
+## Development
 
-To develop all apps and packages, run the following command:
+This project uses [Turborepo](https://turborepo.org/) for monorepo management and [pnpm](https://pnpm.io/) as the package manager.
 
-```
-cd my-turborepo
+### Prerequisites
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+- Node.js >= 18
+- pnpm >= 9.0.0
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+### Setup
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+```bash
+# Install dependencies
+pnpm install
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+# Build all packages
+pnpm build
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+# Run tests
+cd packages/core && pnpm test
 
-### Remote Caching
+# Run type checking
+pnpm check-types
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+# Format code
+pnpm format
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Contributing
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details on:
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
+- How to set up your development environment
+- Our code style guidelines
+- How to submit pull requests
+- Our commit message conventions
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
+## Code of Conduct
 
-## Useful Links
+This project adheres to a [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
 
-Learn more about the power of Turborepo:
+## License
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## Links
+
+- [GitHub Repository](https://github.com/bosquejun/bantai)
+- [npm Package](https://www.npmjs.com/package/@bantai-dev/core)
+- [Report a Bug](https://github.com/bosquejun/bantai/issues)
+- [Request a Feature](https://github.com/bosquejun/bantai/issues)

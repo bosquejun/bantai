@@ -1,6 +1,7 @@
 import { ContextDefinition } from "@/context/define-context.js";
 import { z } from "zod";
-import { RuleResult, ruleEvaluateFnSchema, ruleSchema } from "./schema.js";
+import { RuleResult } from "./results.js";
+import { ruleEvaluateFnSchema, ruleSchema } from "./schema.js";
 
 
 
@@ -8,7 +9,7 @@ type RuleEvaluateFnAsync<T extends z.ZodRawShape> = (
   input: z.infer<z.ZodObject<T>>
 ) => Promise<RuleResult>;
 
-export type ExtractShape<T> = T extends z.ZodObject<infer S> ? S : never;
+type ExtractShape<T> = T extends z.ZodObject<infer S> ? S : never;
 
 
 // Implementation

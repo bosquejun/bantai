@@ -19,5 +19,4 @@ export const ruleSchema = z.object({
 }).brand<'BantaiRule'>();
 
 
-export type RuleResult = z.infer<typeof ruleResultSchema>;
 export type RuleEvaluateFn<T extends z.ZodRawShape> = z.infer<typeof ruleEvaluateFnSchema<T>>;

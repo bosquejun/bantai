@@ -1,4 +1,5 @@
-import { RuleResult, ruleResultSchema } from "./schema.js"
+import z from "zod";
+import { ruleResultSchema } from "./schema.js";
 
 
 
@@ -19,3 +20,6 @@ export function deny({reason}: {reason?: string | null} = {
         reason
     })
 }
+
+
+export type RuleResult = z.infer<typeof ruleResultSchema>;
