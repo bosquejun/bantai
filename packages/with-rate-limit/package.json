@@ -58,7 +58,8 @@
   "dependencies": {
     "ms": "^2.1.3",
     "zod": "^4.3.5",
-    "@bantai-dev/core": "workspace:*"
+    "@bantai-dev/core": "workspace:*",
+    "@bantai-dev/with-storage": "workspace:*"
   },
   "peerDependencies": {
     "zod": "^4.3.5"
