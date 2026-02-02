@@ -1,15 +1,16 @@
 import { defineContext, type ContextDefinition } from "@bantai-dev/core";
 import ms from "ms";
 import { z } from "zod";
+import { rateLimit } from "./tools/rate-limit.js";
 
-const windowMsSchema = z.string().refine((value) => {
+export const windowMsSchema = z.string().refine((value) => {
   const msWindow = ms(value as ms.StringValue);
   return !isNaN(msWindow) && msWindow > 0;
 }, {
   message: "Invalid time window",
 });
 
-const rateLimitSchema = z.object({
+export const rateLimitSchema = z.object({
     rateLimit: z.object({
         key: z.string(),
     }).and(z.discriminatedUnion('type', [
@@ -27,6 +28,11 @@ const rateLimitSchema = z.object({
 });
 
 
-type RateLimitShape = typeof rateLimitSchema extends z.ZodObject<infer S> ? S : never;
+export type RateLimitShape = typeof rateLimitSchema extends z.ZodObject<infer S> ? S : never;
 
-export const rateLimitingContext = defineContext(rateLimitSchema) satisfies ContextDefinition<RateLimitShape>;
+export const rateLimitingContext = defineContext(rateLimitSchema, {
+  tools: {
+    rateLimit
+  }
+}) satisfies ContextDefinition<RateLimitShape>;
+

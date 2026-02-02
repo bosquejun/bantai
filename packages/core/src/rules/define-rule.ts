@@ -1,6 +1,6 @@
-import { ContextDefinition, defineContext } from "@/context/define-context.js";
 import { z } from "zod";
-import { RuleResult, allow } from "./results.js";
+import { ContextDefinition } from "../context/define-context.js";
+import { RuleResult } from "./results.js";
 import { ruleEvaluateFnSchema, ruleHookFnSchema, ruleSchema } from "./schema.js";
 
 
@@ -79,25 +79,3 @@ export type RuleDefinition<
         onDeny?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;
     };
 };
-
-
-const schema = z.object({
-  name: z.string(),
-  a: z.number(),
-  b: z.number(),
-});
-
-const ctx = defineContext(schema, {
-  tools: {
-    calculator: (a: number, b: number) => a + b,
-  }
-});
-
-const rule = defineRule(ctx, 'test', async (input, { tools }) => {
-  const result = tools.calculator(input.a, input.b);
-  return allow();
-}, {
-  onAllow: async (input, { tools }) => {
-    tools.calculator(input.a, input.b);
-  },
-});

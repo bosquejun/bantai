@@ -1,7 +1,7 @@
 
-import { contextSchema } from "@/context/schema.js";
-import { ruleResultSchema, ruleSchema } from "@/rules/schema.js";
 import z from "zod";
+import { contextSchema } from "../context/schema.js";
+import { ruleResultSchema, ruleSchema } from "../rules/schema.js";
 
 
 export const policyStrategySchema = z.enum(['preemptive', 'exhaustive']);

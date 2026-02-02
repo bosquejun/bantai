@@ -1,5 +1,5 @@
-import { ContextDefinition } from "@/context/define-context.js";
 import z from "zod";
+import { ContextDefinition } from "../context/define-context.js";
 import { PolicyDefinition } from "./define-policy.js";
 import { PolicyResult, PolicyStrategy, policyResultSchema } from "./schema.js";
 
@@ -44,9 +44,9 @@ export async function evaluatePolicy<
     
     
     for (const rule of policy.rules.values()) {
-        const result = await rule.evaluate(inputValue);
+        const result = await rule.evaluate(inputValue, { tools: policy.context.tools });
         if(!result.allowed){
-            violatedRules.push({
+            violatedRules.push({    
                 name: rule.name,
                 result,
             });

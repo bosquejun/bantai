@@ -1,7 +1,7 @@
 {
-  "name": "@bantai-dev/with-rate-limiting",
+  "name": "@bantai-dev/with-storage",
   "version": "0.2.0",
-  "description": "Rate limiting plugin for @bantai-dev/core",
+  "description": "Storage plugin for @bantai-dev/core",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,16 +19,15 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/bosquejun/bantai.git",
-    "directory": "packages/with-rate-limiting"
+    "directory": "packages/with-storage"
   },
   "homepage": "https://github.com/bosquejun/bantai#readme",
   "bugs": {
     "url": "https://github.com/bosquejun/bantai/issues"
   },
   "keywords": [
-    "rate-limiting",
-    "policy-engine",
-    "policy-library",
+    "storage",
+    "storage-plugin",
     "bantai"
   ],
   "author": {
@@ -43,8 +42,8 @@
   "scripts": {
     "build": "tsup",
     "check-types": "tsc --noEmit",
-    "test": "vitest",
-    "test:watch": "vitest --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:coverage": "vitest --coverage"
   },
   "devDependencies": {
