@@ -10,13 +10,13 @@ type ExtractContextInput<TContext> = TContext extends ContextDefinition<infer S>
     : never;
 
 type ExtractPolicyContext<TPolicy> = TPolicy extends { context: infer TContext }
-    ? TContext extends ContextDefinition<z.ZodRawShape>
+    ? TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>
         ? ExtractContextInput<TContext>
         : never
     : never;
 
 export async function evaluatePolicy<
-    TContext extends ContextDefinition<z.ZodRawShape>,
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
     TPolicy extends PolicyDefinition<TContext, any, any>
 >(
     policy: TPolicy,

@@ -13,20 +13,20 @@ type ExtractRuleName<T> = T extends RuleDefinition<infer _, infer N>
         : never
     : never;
 
-type ExtractShape<T> = T extends ContextDefinition<infer S> ? S : never;
+type ExtractShape<T> = T extends z.ZodObject<infer S> ? S : never;
 
-type RulesMap<TRules extends readonly RuleDefinition<z.ZodRawShape, string>[]> = {
+type RulesMap<TRules extends readonly RuleDefinition<ContextDefinition<z.ZodRawShape, Record<string, unknown>>, string>[]> = {
     [K in ExtractRuleName<TRules[number]>]: Extract<TRules[number], { name: K }>;
 };
 
 type Extract<T, U> = T extends U ? T : never;
 
-type AnyRuleDefinition = RuleDefinition<z.ZodRawShape, string>;
+type AnyRuleDefinition = RuleDefinition<ContextDefinition<z.ZodRawShape, Record<string, unknown>>, string>;
 
 export type PolicyDefinition<
-    TContext extends ContextDefinition<z.ZodRawShape>,
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
     TName extends string,
-    TRules extends readonly RuleDefinition<ExtractShape<TContext>, string>[]
+    TRules extends readonly RuleDefinition<TContext, string>[]
 > = Omit<z.infer<typeof policySchema>, 'name' | 'rules'> & {
     name: TName;
     rules: Map<string, TRules[number]> & {
@@ -37,9 +37,9 @@ export type PolicyDefinition<
 };
 
 export function definePolicy<
-    TContext extends ContextDefinition<z.ZodRawShape>,
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
     TName extends string,
-    TRules extends readonly RuleDefinition<ExtractShape<TContext>, string>[]
+    TRules extends readonly RuleDefinition<TContext, string>[]
 >(
     context: TContext,
     name: TName,
