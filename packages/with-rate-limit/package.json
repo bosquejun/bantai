@@ -1,6 +1,6 @@
 {
   "name": "@bantai-dev/with-rate-limiting",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Rate limiting plugin for @bantai-dev/core",
   "type": "module",
   "main": "./dist/index.js",
