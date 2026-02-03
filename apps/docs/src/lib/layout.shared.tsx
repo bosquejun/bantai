@@ -13,9 +13,6 @@ export function baseOptions(): BaseLayoutProps {
           </div>
         </div>,
     },
-    searchToggle:{
-      enabled:false
-    },
     githubUrl:'https://github.com/bosquejun/bantai',
     links:[{
       text:'Docs',
