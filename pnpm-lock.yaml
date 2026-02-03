@@ -70,8 +70,8 @@ importers:
         version: 3.4.0
     devDependencies:
       '@bantai-dev/core':
-        specifier: ^0.3.0
-        version: 0.3.0(zod@4.3.6)
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tailwindcss/postcss':
         specifier: ^4.1.18
         version: 4.1.18
@@ -332,11 +332,6 @@ packages:
   '@babel/types@7.28.6':
     resolution: {integrity: sha512-0ZrskXVEHSWIqZM/sQZ4EV3jZJXRkio/WCxaqKZP1g//CEWEPSfeZFcms4XeKBCHU0ZKnIkdJeU/kF+eRp5lBg==}
     engines: {node: '>=6.9.0'}
-
-  '@bantai-dev/core@0.3.0':
-    resolution: {integrity: sha512-7CEEdg1DRrnosifEjRefFUL1lgkL0YKKgYcT4ZAsfB/mdOOdloSFJLt5trs4GMrhzP/qTKM9d18HowNQjojq/g==}
-    peerDependencies:
-      zod: ^4.3.5
 
   '@changesets/apply-release-plan@7.0.14':
     resolution: {integrity: sha512-ddBvf9PHdy2YY0OUiEl3TV78mH9sckndJR14QAt87KLEbIov81XO0q0QAmvooBxXlqRRP8I9B7XOzZwQG7JkWA==}
@@ -4812,10 +4807,6 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
-
-  '@bantai-dev/core@0.3.0(zod@4.3.6)':
-    dependencies:
-      zod: 4.3.6
 
   '@changesets/apply-release-plan@7.0.14':
     dependencies:
