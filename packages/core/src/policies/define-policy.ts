@@ -1,6 +1,6 @@
-import { ContextDefinition } from "@/context/define-context.js";
-import { RuleDefinition } from "@/rules/define-rule.js";
 import z from "zod";
+import { ContextDefinition } from "../context/define-context.js";
+import { RuleDefinition } from "../rules/define-rule.js";
 import { PolicyStrategy, policySchema } from "./schema.js";
 
 type ExtractRuleName<T> = T extends RuleDefinition<infer _, infer N>

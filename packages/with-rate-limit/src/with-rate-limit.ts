@@ -1,28 +1,9 @@
-import { ContextDefinition, defineContext } from "@bantai-dev/core";
+import { ContextDefinition, defineContext, ExtractContextShape, ExtractContextTools } from "@bantai-dev/core";
 import { withStorage } from "@bantai-dev/with-storage";
 import { z } from "zod";
-import { RateLimitShape, rateLimitSchema } from "./context.js";
-import { RateLimitStorage, rateLimit } from "./tools/rate-limit.js";
+import { rateLimitSchema, RateLimitShape } from "./context.js";
+import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
 
-/**
- * Extracts the shape type from a context
- */
-type ExtractContextShape<TContext> = TContext extends ContextDefinition<
-  infer S,
-  Record<string, unknown>
->
-  ? S
-  : never;
-
-/**
- * Extracts the tools type from a context
- */
-type ExtractContextTools<TContext> = TContext extends ContextDefinition<
-  z.ZodRawShape,
-  infer TTools
->
-  ? TTools
-  : Record<string, unknown>;
 
   export type DefaultRateLimitValues =  Partial<z.infer<typeof rateLimitSchema['shape']['rateLimit']>>
 
@@ -77,4 +58,3 @@ type ExtractContextTools<TContext> = TContext extends ContextDefinition<
     >;
   };
 
-  

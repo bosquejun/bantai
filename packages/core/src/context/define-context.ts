@@ -26,3 +26,24 @@ export type ContextDefinition<T extends z.ZodRawShape, TTools extends Record<str
 }
 
 
+/**
+ * Extracts the shape type from a context
+ */
+export type ExtractContextShape<TContext> = TContext extends ContextDefinition<
+  infer S,
+  Record<string, unknown>
+>
+  ? S
+  : never;
+
+/**
+ * Extracts the tools type from a context
+ */
+export type ExtractContextTools<TContext> = TContext extends ContextDefinition<
+  z.ZodRawShape,
+  infer TTools
+>
+  ? TTools
+  : Record<string, unknown>;
+
+
