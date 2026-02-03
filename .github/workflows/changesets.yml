@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-environment: prod 
+environment: production
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
