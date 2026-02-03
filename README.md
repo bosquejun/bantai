@@ -57,8 +57,9 @@ console.log(result.violatedRules); // Array of violations
 This monorepo contains the following packages:
 
 - **[@bantai-dev/core](./packages/core/)** - Core policy evaluation library
-- **[@bantai-dev/eslint-config](./packages/eslint-config/)** - Shared ESLint configurations
-- **[@bantai-dev/typescript-config](./packages/typescript-config/)** - Shared TypeScript configurations
+- **[@bantai-dev/with-rate-limit](./packages/with-rate-limit/)** - Rate limiting plugin for Bantai
+- **[@bantai-dev/with-storage](./packages/with-storage/)** - Storage plugin for Bantai
+- **[@bantai-dev/storage-redis](./packages/storage-redis/)** - Redis storage adapter for Bantai
 
 ## Documentation
 
@@ -66,13 +67,15 @@ For detailed documentation, API reference, and examples, see the [core package R
 
 ## Project Structure
 
-```
+```text
 bantai-dev/
 ├── packages/
 │   ├── core/              # Main policy evaluation library
-│   ├── eslint-config/     # ESLint configurations
-│   └── typescript-config/ # TypeScript configurations
-├── apps/                  # Applications (if any)
+│   ├── with-rate-limit/   # Rate limiting plugin
+│   ├── with-storage/      # Storage plugin
+│   ├── storage-redis/     # Redis storage adapter
+├── apps/
+│   └── docs/              # Documentation site
 └── turbo.json            # Turborepo configuration
 ```
 

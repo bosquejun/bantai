@@ -1,0 +1,415 @@
+# @bantai-dev/storage-redis
+
+> Redis storage adapter for @bantai-dev/core
+
+Production-ready Redis storage adapter for Bantai with distributed locking, atomic operations, and TTL support. Perfect for rate limiting, caching, and distributed storage needs.
+
+## Installation
+
+```bash
+npm install @bantai-dev/storage-redis @bantai-dev/with-storage @bantai-dev/core ioredis zod
+# or
+pnpm add @bantai-dev/storage-redis @bantai-dev/with-storage @bantai-dev/core ioredis zod
+# or
+yarn add @bantai-dev/storage-redis @bantai-dev/with-storage @bantai-dev/core ioredis zod
+```
+
+**Note**: `@bantai-dev/with-storage`, `@bantai-dev/core`, `ioredis`, and `zod` are peer dependencies and must be installed separately.
+
+## Quick Start
+
+```typescript
+import { z } from 'zod';
+import { defineContext } from '@bantai-dev/core';
+import { withStorage } from '@bantai-dev/with-storage';
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+
+// 1. Define your schema
+const userDataSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  lastLogin: z.number(),
+});
+
+// 2. Create Redis storage adapter
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  userDataSchema,
+  {
+    prefix: 'app:',
+    lockTimeoutMs: 5000,
+    lockTTLMs: 10000,
+  }
+);
+
+// 3. Use with Bantai context
+const context = withStorage(
+  defineContext(z.object({ userId: z.string() })),
+  storage
+);
+
+// 4. Use in rules
+const userRule = context.defineRule('get-user', {
+  kind: 'function',
+  evaluate: async (input) => {
+    const user = await input.tools.storage.get(`user:${input.userId}`);
+    
+    if (!user) {
+      return deny('User not found');
+    }
+
+    return allow(`User: ${user.name}`);
+  },
+});
+```
+
+## Features
+
+- **Distributed Locking**: Atomic read-modify-write operations using Redis locks
+- **TTL Support**: Automatic expiration of keys
+- **Schema Validation**: Zod schema validation on read/write
+- **Lua Scripts**: Efficient atomic operations using Redis Lua scripts
+- **Connection Options**: Support for Redis URL or existing ioredis client
+- **Configurable**: Customizable prefix, lock timeouts, and retry settings
+
+## API Reference
+
+### `createRedisStorage(redis, schema, options?)`
+
+Creates a Redis storage adapter that implements the `StorageAdapter` interface.
+
+**Parameters:**
+
+- `redis`: Redis connection options
+  - `client?`: Existing ioredis client instance
+  - `url?`: Redis connection URL (e.g., `redis://localhost:6379`)
+- `schema`: Zod schema for validating stored values
+- `options?`: Configuration options
+  - `prefix?`: Key prefix for all operations (default: `""`)
+  - `lockTimeoutMs?`: Maximum time to wait for lock acquisition (default: `5000`)
+  - `lockTTLMs?`: TTL for lock keys (default: `10000`, must be >= `lockTimeoutMs`)
+  - `lockRetryMs?`: Sleep time between lock retry attempts (default: `50`)
+
+**Returns:** `StorageAdapter<z.infer<T>>`
+
+## Connection Options
+
+### Using Redis URL
+
+```typescript
+const storage = createRedisStorage(
+  { url: 'redis://localhost:6379' },
+  schema
+);
+```
+
+### Using Existing Client
+
+```typescript
+import Redis from 'ioredis';
+
+const client = new Redis({
+  host: 'localhost',
+  port: 6379,
+  password: 'your-password',
+});
+
+const storage = createRedisStorage(
+  { client },
+  schema
+);
+```
+
+### With Authentication
+
+```typescript
+const storage = createRedisStorage(
+  { url: 'redis://:password@localhost:6379' },
+  schema
+);
+```
+
+## Configuration Options
+
+### Prefix
+
+Add a prefix to all keys for namespacing:
+
+```typescript
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  schema,
+  {
+    prefix: 'myapp:',
+  }
+);
+
+// Keys will be stored as: myapp:user:123
+await storage.set('user:123', data);
+```
+
+### Lock Settings
+
+Configure distributed locking behavior:
+
+```typescript
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  schema,
+  {
+    lockTimeoutMs: 10000,  // Wait up to 10s for lock
+    lockTTLMs: 20000,      // Lock expires after 20s
+    lockRetryMs: 100,       // Retry every 100ms
+  }
+);
+```
+
+**Important**: `lockTTLMs` should be greater than `lockTimeoutMs` to prevent lock expiration during normal operations.
+
+## Examples
+
+### Basic Usage
+
+```typescript
+import { z } from 'zod';
+import { defineContext, defineRule } from '@bantai-dev/core';
+import { withStorage } from '@bantai-dev/with-storage';
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+
+const sessionSchema = z.object({
+  userId: z.string(),
+  expiresAt: z.number(),
+});
+
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  sessionSchema
+);
+
+const context = withStorage(
+  defineContext(z.object({ sessionId: z.string() })),
+  storage
+);
+
+const sessionRule = context.defineRule('check-session', {
+  kind: 'function',
+  evaluate: async (input) => {
+    const session = await input.tools.storage.get(input.sessionId);
+    
+    if (!session) {
+      return deny('Session not found');
+    }
+
+    if (session.expiresAt < Date.now()) {
+      await input.tools.storage.delete(input.sessionId);
+      return deny('Session expired');
+    }
+
+    return allow('Session valid');
+  },
+});
+```
+
+### Atomic Updates
+
+The Redis adapter provides atomic updates using distributed locking:
+
+```typescript
+const counterSchema = z.object({
+  count: z.number().int().min(0),
+});
+
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  counterSchema
+);
+
+const context = withStorage(
+  defineContext(z.object({ counterKey: z.string() })),
+  storage
+);
+
+const incrementRule = context.defineRule('increment', {
+  kind: 'function',
+  evaluate: async (input) => {
+    // Atomic increment - safe for concurrent access
+    const newValue = await input.tools.storage.update(
+      input.counterKey,
+      (current) => {
+        const count = current?.count || 0;
+        return {
+          value: { count: count + 1 },
+          ttlMs: 3600000, // 1 hour
+        };
+      }
+    );
+
+    return allow(`Counter: ${newValue?.count}`);
+  },
+});
+```
+
+### TTL (Time-to-Live)
+
+Set expiration times for cached data:
+
+```typescript
+const cacheSchema = z.object({
+  data: z.string(),
+  cachedAt: z.number(),
+});
+
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  cacheSchema
+);
+
+const context = withStorage(
+  defineContext(z.object({ cacheKey: z.string() })),
+  storage
+);
+
+const cacheRule = context.defineRule('get-cached', {
+  kind: 'function',
+  evaluate: async (input) => {
+    const cached = await input.tools.storage.get(input.cacheKey);
+    
+    if (cached) {
+      return allow('Cache hit');
+    }
+
+    // Fetch and cache with 5 minute TTL
+    const data = await fetchData();
+    await input.tools.storage.set(
+      input.cacheKey,
+      {
+        data,
+        cachedAt: Date.now(),
+      },
+      5 * 60 * 1000 // 5 minutes - Redis will auto-expire
+    );
+
+    return allow('Data cached');
+  },
+});
+```
+
+### Integration with Rate Limiting
+
+Perfect for production rate limiting:
+
+```typescript
+import { withRateLimit, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+
+const redisStorage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  rateLimitSchema,
+  {
+    prefix: 'ratelimit:',
+  }
+);
+
+const rateLimitedContext = withRateLimit(baseContext, {
+  storage: redisStorage,
+});
+```
+
+## Distributed Locking
+
+The Redis adapter uses distributed locking to ensure atomic operations:
+
+1. **Lock Acquisition**: Uses Redis `SET NX` (set if not exists) with TTL
+2. **Operation**: Performs read-modify-write while holding the lock
+3. **Lock Release**: Atomically releases lock and writes new value using Lua scripts
+
+This prevents race conditions in distributed environments where multiple processes might update the same key concurrently.
+
+### Lock Timeout
+
+If a lock cannot be acquired within `lockTimeoutMs`, an error is thrown:
+
+```typescript
+try {
+  await storage.update(key, updater);
+} catch (error) {
+  if (error.message.includes('Failed to acquire lock')) {
+    // Handle lock timeout - retry or fail gracefully
+  }
+}
+```
+
+## Error Handling
+
+The adapter throws errors in the following cases:
+
+- **Lock timeout**: Cannot acquire lock within `lockTimeoutMs`
+- **Lock expired**: Lock expired between acquisition and release (should not happen in normal flow)
+- **Connection errors**: Redis connection issues (handled by ioredis)
+
+```typescript
+try {
+  await storage.set(key, value);
+} catch (error) {
+  if (error.message.includes('Failed to acquire lock')) {
+    // Retry logic
+  } else {
+    // Other Redis errors
+  }
+}
+```
+
+## Performance Considerations
+
+- **Lua Scripts**: Operations use pre-loaded Lua scripts for efficiency
+- **Connection Pooling**: Use connection pooling for high-throughput scenarios
+- **Key Prefixing**: Use prefixes to organize keys and enable easy cleanup
+- **TTL Management**: Set appropriate TTLs to prevent key accumulation
+
+## Production Best Practices
+
+1. **Use Connection Pooling**: Configure ioredis with appropriate pool settings
+2. **Monitor Lock Timeouts**: Adjust `lockTimeoutMs` based on operation duration
+3. **Set Appropriate TTLs**: Prevent key accumulation with proper expiration
+4. **Use Key Prefixes**: Organize keys for easier management and cleanup
+5. **Handle Errors**: Implement retry logic for transient failures
+
+```typescript
+import Redis from 'ioredis';
+
+const client = new Redis({
+  host: process.env.REDIS_HOST,
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
+});
+
+const storage = createRedisStorage(
+  { client },
+  schema,
+  {
+    prefix: 'prod:',
+    lockTimeoutMs: 10000,
+    lockTTLMs: 20000,
+  }
+);
+```
+
+## Requirements
+
+- Node.js >= 18
+- TypeScript >= 5.0
+- Zod >= 4.3.5
+- ioredis >= 5.0.0
+- @bantai-dev/with-storage
+- @bantai-dev/core
+- Redis server
+
+## License
+
+MIT
+
