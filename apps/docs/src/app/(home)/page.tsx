@@ -1,16 +1,26 @@
-import Link from 'next/link';
+import { Capabilities } from '@/components/bantai/Capabilities';
+import { Clarity } from '@/components/bantai/Clarity';
+import { CodeSection } from '@/components/bantai/CodeSection';
+import { Contribution } from '@/components/bantai/Contribution';
+import { Design } from '@/components/bantai/Design';
+import { Footer } from '@/components/bantai/Footer';
+import { Hero } from '@/components/bantai/Hero';
+import { Process } from '@/components/bantai/Process';
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col justify-center text-center flex-1">
-      <h1 className="text-2xl font-bold mb-4">Hello World</h1>
-      <p>
-        You can open{' '}
-        <Link href="/docs" className="font-medium underline">
-          /docs
-        </Link>{' '}
-        and see the documentation.
-      </p>
+    <div className="min-h-screen flex flex-col selection:bg-black dark:selection:bg-white selection:text-white dark:selection:text-black">
+      {/* <Header /> */}
+      <main className="grow">
+        <Hero />
+        <Capabilities />
+        <Process />
+        <Design />
+        <CodeSection />
+        <Clarity />
+        <Contribution />
+      </main>
+      <Footer />
     </div>
   );
 }

@@ -1,0 +1,137 @@
+'use client';
+
+import React, { useState } from 'react';
+
+const TABS = [
+  {
+    id: 'context',
+    label: '01. Context',
+    filename: 'context.ts',
+    code: `import { z } from 'zod';
+import { defineContext } from '@bantai-dev/core';
+
+// Define your input schema
+export const userContext = defineContext(
+  z.object({
+    age: z.number().min(0),
+    role: z.enum(['admin', 'editor', 'guest']),
+    isKycVerified: z.boolean()
+  })
+);`
+  },
+  {
+    id: 'rule',
+    label: '02. Rule',
+    filename: 'rules.ts',
+    code: `import { defineRule, allow, deny } from '@bantai-dev/core';
+import { userContext } from './context';
+
+// Logic-driven decision units
+export const ageRule = defineRule(userContext, 'age-v', async (ctx) => {
+  if (ctx.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18+' });
+});`
+  },
+  {
+    id: 'policy',
+    label: '03. Policy',
+    filename: 'policy.ts',
+    code: `import { definePolicy } from '@bantai-dev/core';
+import { userContext } from './context';
+import { ageRule } from './rules';
+
+// Group rules into executable policies
+export const signupPolicy = definePolicy(
+  userContext, 
+  'signup-policy', 
+  [ageRule]
+);`
+  },
+  {
+    id: 'eval',
+    label: '04. Evaluation',
+    filename: 'main.ts',
+    code: `import { evaluatePolicy } from '@bantai-dev/core';
+import { signupPolicy } from './policy';
+
+// Execute anywhere (Edge, Node, Browser)
+const result = await evaluatePolicy(signupPolicy, { 
+  age: 25, 
+  role: 'editor',
+  isKycVerified: true 
+});
+
+console.log(result.decision); // 'allow'
+console.log(result.violatedRules); // []`
+  }
+];
+
+export const CodeSection: React.FC = () => {
+  const [activeTab, setActiveTab] = useState(TABS[0]);
+
+  return (
+    <section id="usage" className="py-40 bg-[var(--bg-primary)] border-b border-[var(--border-muted)] relative">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        <div className="lg:flex items-start gap-32">
+          <div className="lg:w-2/5 mb-24 lg:mb-0">
+            <span className="text-[var(--text-primary)]/20 font-mono text-[10px] font-black uppercase tracking-[0.5em] mb-6 block">QUICK_START</span>
+            <h2 className="text-4xl lg:text-6xl font-black text-[var(--text-primary)] mb-10 uppercase tracking-tighter leading-none">CLEAN <br />IMPLEMENTATION.</h2>
+            <p className="text-[var(--text-primary)]/50 mb-12 leading-relaxed font-medium uppercase text-sm tracking-tight">
+              Bantai sits in the middle of your application and its decisions. Use our declarative API to craft explainable, type-safe logic in minutes.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-1.5 h-1.5 bg-[var(--text-primary)]"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]/60">Zod-Compatible</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-1.5 h-1.5 bg-[var(--text-primary)]"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]/60">Strict TypeScript Support</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:w-3/5">
+            <div className="flex flex-wrap gap-1 mb-6 border-b border-[var(--border-muted)] pb-4">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                    activeTab.id === tab.id 
+                      ? 'text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]' 
+                      : 'text-[var(--text-primary)]/30 hover:text-[var(--text-primary)]/60'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="border-2 border-[var(--border-muted)] bg-[var(--bg-primary)] dark:shadow-[0_30px_60px_-15px_rgba(0,0,0,1)] light:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] group">
+              <div className="border-b border-[var(--border-muted)] px-6 py-4 flex items-center justify-between bg-[var(--bg-secondary)]">
+                 <div className="flex gap-2">
+                    <div className="w-3 h-3 bg-[var(--text-primary)]/10 rounded-full"></div>
+                    <div className="w-3 h-3 bg-[var(--text-primary)]/10 rounded-full"></div>
+                    <div className="w-3 h-3 bg-[var(--text-primary)]/10 rounded-full"></div>
+                 </div>
+                 <span className="text-[9px] font-mono text-[var(--text-primary)]/40 tracking-widest uppercase italic">{activeTab.filename}</span>
+              </div>
+              <div className="p-8 md:p-12 font-mono text-[11px] md:text-sm leading-6 min-h-[350px] overflow-x-auto relative">
+                 <pre className="text-[var(--text-primary)]/80">
+                    <code className="block whitespace-pre">{activeTab.code}</code>
+                 </pre>
+                 <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="text-[8px] font-mono text-[var(--text-primary)]/20 uppercase tracking-widest">Read Only</div>
+                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
