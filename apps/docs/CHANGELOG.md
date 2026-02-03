@@ -1,14 +1,8 @@
-# @bantai-dev/core
+# docs
 
-## 0.4.0
+## 0.1.0
 
 ### Minor Changes
 
 - Implemented defineRateLimitRule() wrapper for rate limiting extension;
   Setup web-based docs with fumadocs;
-
-## 0.3.0
-
-### Minor Changes
-
-- Support redis storage rate limit HOC
