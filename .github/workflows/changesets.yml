@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-environment: production
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -12,6 +11,7 @@ jobs:
   version:
     name: Version Packages
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: write
       pull-requests: write
