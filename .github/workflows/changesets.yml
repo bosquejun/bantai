@@ -47,6 +47,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Configure npm and pnpm authentication
+        run: |
+          # Define the registry for the specific scope
+          pnpm config set @bantai-dev:registry https://registry.npmjs.org/
+          # Set the auth token for the registry (at the project root)
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
