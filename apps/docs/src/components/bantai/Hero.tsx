@@ -160,18 +160,18 @@ export const Hero: React.FC = () => {
 
       <div className="relative max-w-[1400px] mx-auto px-6 sm:px-12">
         <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center border border-[var(--border-muted)] px-3 py-1 mb-12 relative overflow-hidden bg-[var(--bg-secondary)]">
-            <span className="text-[9px] font-mono font-bold uppercase tracking-[0.4em] text-[var(--text-primary)]/60">Logic-to-Decision Engine</span>
+          <div className="inline-flex items-center border px-3 py-1 mb-12 relative overflow-hidden bg-background">
+            <span className="text-[9px] font-mono font-bold uppercase tracking-[0.4em] text-foreground/60">Logic-to-Decision Engine</span>
           </div>
 
-          <h1 className="text-[clamp(2.5rem,10vw,140px)] font-bold text-[var(--text-primary)] tracking-[-0.05em] mb-8 leading-[0.85] uppercase font-heading">
+          <h1 className="text-[clamp(2.5rem,10vw,140px)] font-bold text-foreground tracking-[-0.05em] mb-8 leading-[0.85] uppercase font-heading border-none">
             <span className="block">Turn complex logic</span>
             <span className="block relative text-outline">into clear decisions</span>
           </h1>
           
-          <div className="w-full max-w-2xl border-t border-[var(--border-muted)] pt-8 mb-20">
-             <p className="text-xl lg:text-2xl text-[var(--text-primary)]/60 leading-tight font-medium uppercase tracking-tighter font-heading">
-               Bantai evaluates real-world inputs into <span className="text-[var(--text-primary)]">deterministic, explainable allow/deny decisions</span> with full TypeScript safety.
+          <div className="w-full max-w-2xl border-t border-input pt-8 mb-20">
+             <p className="text-xl lg:text-2xl text-foreground/60 leading-tight font-medium uppercase tracking-tighter font-heading">
+               Bantai evaluates real-world inputs into <span className="text-foreground">deterministic, explainable allow/deny decisions</span> with full TypeScript safety.
              </p>
           </div>
 
@@ -182,7 +182,7 @@ export const Hero: React.FC = () => {
             </button>
             </Link>
             <Link href="https://github.com/bosquejun/bantai" target="_blank" className="w-full sm:w-1/2">
-            <button className="w-full py-6 bg-transparent border-y-2 border-r-2 border-l-2 sm:border-l-0 border-[var(--border-muted)] text-[var(--text-primary)] font-black transition-all hover:bg-[var(--bg-secondary)] uppercase tracking-[0.4em] text-[10px] font-heading">
+            <button className="bg-background hover:bg-background/90 w-full py-6 border-y-2 border-r-2 border-l-2 sm:border-l-0 border-input text-foreground font-black transition-all uppercase tracking-[0.4em] text-[10px] font-heading">
               VIEW ON GITHUB
             </button>
             </Link>

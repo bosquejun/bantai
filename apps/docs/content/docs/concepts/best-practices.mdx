@@ -1,0 +1,266 @@
+---
+title: Best Practices
+description: Guidelines for writing effective rules, choosing strategies, and leveraging Bantai's features
+---
+
+# Best Practices
+
+Guidelines for writing effective rules, choosing strategies, and leveraging Bantai's features.
+
+## Keep Rules Focused
+
+Each rule should check one specific thing:
+
+```typescript
+// ✅ Good: Focused rule
+const ageRule = defineRule(context, 'age-check', async (input) => {
+  if (input.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18 or older' });
+});
+
+// ❌ Bad: Multiple concerns
+const complexRule = defineRule(context, 'complex-check', async (input) => {
+  // Checking age
+  if (input.age < 18) {
+    return deny({ reason: 'Too young' });
+  }
+  // Checking role
+  if (input.role !== 'admin') {
+    return deny({ reason: 'Not admin' });
+  }
+  // Checking balance
+  if (input.balance < 100) {
+    return deny({ reason: 'Insufficient balance' });
+  }
+  return allow();
+});
+```
+
+**Benefits:**
+- Easier to test
+- Easier to reuse
+- Clearer error messages
+- Better composition
+
+## Use Appropriate Strategies
+
+Choose the right evaluation strategy for your use case:
+
+### Preemptive Strategy
+
+Use for:
+- Security checks
+- Authentication
+- Rate limiting
+- Critical validations
+- Fast rejection scenarios
+
+```typescript
+const securityPolicy = definePolicy(context, 'security', [authRule, permissionRule], {
+  defaultStrategy: 'preemptive', // Fail fast
+});
+```
+
+### Exhaustive Strategy
+
+Use for:
+- Form validation
+- User input validation
+- Collecting all errors
+- Comprehensive feedback
+
+```typescript
+const validationPolicy = definePolicy(
+  context,
+  'validation',
+  [emailRule, passwordRule, termsRule],
+  {
+    defaultStrategy: 'exhaustive', // Collect all errors
+  }
+);
+```
+
+## Provide Clear Reasons
+
+Always provide clear, actionable reasons in your `allow()` and `deny()` calls:
+
+```typescript
+// ✅ Good: Clear reason
+return deny({ reason: 'User must be 18 or older to access this content' });
+
+// ❌ Bad: Vague reason
+return deny({ reason: 'Invalid' });
+```
+
+**Benefits:**
+- Better debugging
+- User-friendly error messages
+- Easier troubleshooting
+- Better logging
+
+## Leverage Type Safety
+
+Let TypeScript catch errors at compile time:
+
+```typescript
+// ✅ Good: Type-safe
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+const rule = defineRule(context, 'check', async (input) => {
+  // TypeScript ensures input.userId and input.age exist
+  // TypeScript prevents typos and invalid field access
+});
+```
+
+## Use Default Values
+
+Use default values for optional fields with sensible defaults:
+
+```typescript
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    timestamp: z.number(),
+  }),
+  {
+    defaultValues: {
+      timestamp: Date.now(), // Sensible default
+    },
+  }
+);
+```
+
+This reduces boilerplate when evaluating policies.
+
+## Extend with Tools
+
+Use extensions for common functionality:
+
+```typescript
+// ✅ Good: Use official extensions
+import { withStorage } from '@bantai-dev/with-storage';
+import { withRateLimit } from '@bantai-dev/with-rate-limit';
+
+const context = withRateLimit(
+  withStorage(baseContext, storage),
+  { storage: rateLimitStorage }
+);
+```
+
+**Benefits:**
+- Well-tested code
+- Consistent patterns
+- Better documentation
+- Community support
+
+## Order Rules by Importance
+
+In preemptive mode, order rules by importance:
+
+```typescript
+// ✅ Good: Most critical first
+const policy = definePolicy(context, 'security', [
+  authRule,        // Most critical - check first
+  permissionRule,  // Second most critical
+  rateLimitRule,   // Less critical
+], {
+  defaultStrategy: 'preemptive',
+});
+```
+
+## Handle Errors Gracefully
+
+Always handle errors in async operations:
+
+```typescript
+const rule = defineRule(context, 'check-db', async (input, { tools }) => {
+  try {
+    const user = await tools.database.getUser(input.userId);
+    if (user?.active) {
+      return allow({ reason: 'User is active' });
+    }
+    return deny({ reason: 'User is not active' });
+  } catch (error) {
+    // Handle error gracefully
+    return deny({ reason: 'Unable to verify user status' });
+  }
+});
+```
+
+## Use Hooks for Side Effects
+
+Keep rule logic pure, use hooks for side effects:
+
+```typescript
+const rule = defineRule(
+  context,
+  'check-access',
+  async (input) => {
+    // Pure logic - just check and return
+    if (input.role === 'admin') {
+      return allow({ reason: 'Admin access' });
+    }
+    return deny({ reason: 'Access denied' });
+  },
+  {
+    onAllow: async (input, { tools }) => {
+      // Side effect - log access
+      await tools.logger.log(`Access granted to ${input.userId}`);
+    },
+    onDeny: async (input, { tools }) => {
+      // Side effect - log denial
+      await tools.logger.log(`Access denied to ${input.userId}`);
+    },
+  }
+);
+```
+
+## Document Your Policies
+
+Add comments explaining business logic:
+
+```typescript
+// Policy for user registration
+// Validates email, password strength, and terms acceptance
+// Uses exhaustive strategy to show all validation errors
+const registrationPolicy = definePolicy(
+  context,
+  'user-registration',
+  [emailRule, passwordRule, termsRule],
+  {
+    defaultStrategy: 'exhaustive',
+  }
+);
+```
+
+## Test Your Rules
+
+Write tests for your rules:
+
+```typescript
+describe('ageRule', () => {
+  it('allows users 18 and older', async () => {
+    const result = await ageRule.evaluate({ age: 18 });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('denies users under 18', async () => {
+    const result = await ageRule.evaluate({ age: 17 });
+    expect(result.allowed).toBe(false);
+  });
+});
+```
+
+## Related Concepts
+
+- **[Rules](/docs/concepts/rules)** - Learn about writing rules
+- **[Policies](/docs/concepts/policies)** - Learn about creating policies
+- **[Context](/docs/concepts/context)** - Learn about defining contexts
+

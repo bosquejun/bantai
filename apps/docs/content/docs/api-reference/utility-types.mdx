@@ -1,0 +1,73 @@
+---
+title: Utility Types
+description: Helper types for extracting context information
+---
+
+# Utility Types
+
+Helper types for extracting information from contexts and working with Bantai's type system.
+
+## `ExtractContextShape`
+
+Extracts the shape type from a context.
+
+```typescript
+type ExtractContextShape<TContext> = TContext extends ContextDefinition<
+  infer S,
+  Record<string, unknown>
+>
+  ? S
+  : never
+```
+
+**Usage:**
+
+```typescript
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+type ContextShape = ExtractContextShape<typeof context>;
+// ContextShape = { userId: z.ZodString; age: z.ZodNumber }
+```
+
+---
+
+## `ExtractContextTools`
+
+Extracts the tools type from a context.
+
+```typescript
+type ExtractContextTools<TContext> = TContext extends ContextDefinition<
+  z.ZodRawShape,
+  infer TTools
+>
+  ? TTools
+  : Record<string, unknown>
+```
+
+**Usage:**
+
+```typescript
+const context = defineContext(
+  z.object({ userId: z.string() }),
+  {
+    tools: {
+      logger: console,
+      database: dbClient,
+    },
+  }
+);
+
+type ContextTools = ExtractContextTools<typeof context>;
+// ContextTools = { logger: Console; database: DatabaseClient }
+```
+
+## Related Documentation
+
+- **[Types](/docs/api-reference/types)** - Core type definitions
+- **[Function Signatures](/docs/api-reference/function-signatures)** - Function type signatures
+

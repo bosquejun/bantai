@@ -1,0 +1,79 @@
+---
+title: Examples
+description: Real-world examples and use cases for Bantai
+---
+
+# Examples
+
+This guide provides real-world examples demonstrating how to use Bantai for various use cases, from basic validation to complex business logic.
+
+## Example Categories
+
+- **[Basic Validation](/docs/examples/basic-validation)** - Age eligibility, password validation
+- **[Access Control](/docs/examples/access-control)** - Role-based access control (RBAC)
+- **[Resource Management](/docs/examples/resource-management)** - API rate limiting
+- **[Business Logic](/docs/examples/business-logic)** - E-commerce, banking transactions
+- **[Using Storage](/docs/examples/using-storage)** - Session management with storage
+- **[Best Practices](/docs/examples/best-practices)** - Guidelines and recommendations
+
+## Quick Example
+
+Here's a quick example to get you started:
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+
+// Define context
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+// Define rule
+const ageRule = defineRule(context, 'age-check', async (input) => {
+  if (input.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18 or older' });
+});
+
+// Define policy
+const policy = definePolicy(context, 'access-policy', [ageRule], {
+  defaultStrategy: 'preemptive',
+});
+
+// Evaluate
+const result = await evaluatePolicy(policy, { userId: 'user123', age: 25 });
+```
+
+## More Examples
+
+For more comprehensive examples, check out the [examples directory](https://github.com/bosquejun/bantai/tree/main/packages/core/examples) in the repository, which includes:
+
+- Age eligibility with country-specific rules
+- Password validation with complexity checks
+- Name validation with format checks
+- Rate limiting with different strategies
+- RBAC with role hierarchies
+- AI token quota management
+- E-commerce order processing
+- Banking transaction validation
+- Crypto/NFT policies
+- Infrastructure deployment policies
+
+## Next Steps
+
+- **[API Reference](/docs/api-reference)** - Complete API documentation
+- **[Extensions](/docs/extensions/with-rate-limit)** - Learn about extensions
+- **[Concepts](/docs/concepts)** - Deep dive into core concepts
+

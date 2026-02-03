@@ -1,0 +1,208 @@
+---
+title: Tools Integration
+description: Extend contexts with tools for additional functionality
+---
+
+# Tools Integration
+
+Contexts can be extended with tools that provide additional functionality to rules. This is how extensions like storage and rate limiting work.
+
+## What are Tools?
+
+Tools are objects or functions that are available to rules during evaluation. They're passed through the context and accessed via the second parameter in rule evaluation functions.
+
+## Basic Tools
+
+You can add custom tools to any context:
+
+```typescript
+const appContext = defineContext(
+  z.object({
+    userId: z.string(),
+  }),
+  {
+    tools: {
+      logger: {
+        log: (message: string) => console.log(message),
+      },
+      database: {
+        getUser: async (id: string) => {
+          // Fetch user from database
+        },
+      },
+    },
+  }
+);
+```
+
+Access tools in rules:
+
+```typescript
+const rule = defineRule(
+  appContext,
+  'check-user',
+  async (input, { tools }) => {
+    const user = await tools.database.getUser(input.userId);
+    tools.logger.log(`Checking user: ${input.userId}`);
+    // ...
+  }
+);
+```
+
+## Using Storage Tools
+
+The storage extension adds storage capabilities:
+
+```typescript
+import { withStorage } from '@bantai-dev/with-storage';
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+
+const storage = createMemoryStorage(userSchema);
+const contextWithStorage = withStorage(baseContext, storage);
+
+const rule = defineRule(
+  contextWithStorage,
+  'check-cache',
+  async (input, { tools }) => {
+    const cached = await tools.storage.get(`user:${input.userId}`);
+    if (cached) {
+      return allow({ reason: 'Found in cache' });
+    }
+    return deny({ reason: 'Not in cache' });
+  }
+);
+```
+
+## Using Rate Limiting Tools
+
+The rate limiting extension adds rate limiting capabilities:
+
+```typescript
+import { withRateLimit } from '@bantai-dev/with-rate-limit';
+
+const rateLimitedContext = withRateLimit(baseContext, {
+  storage: rateLimitStorage,
+});
+
+const rule = defineRule(
+  rateLimitedContext,
+  'check-rate-limit',
+  async (input, { tools }) => {
+    const result = await tools.rateLimit.checkRateLimit(
+      tools.storage,
+      {
+        key: `user:${input.userId}`,
+        type: 'fixed-window',
+        limit: 100,
+        windowMs: '1h',
+      }
+    );
+    
+    if (!result.allowed) {
+      return deny({ reason: result.reason });
+    }
+    
+    return allow();
+  }
+);
+```
+
+## Combining Multiple Tools
+
+You can combine multiple tool extensions:
+
+```typescript
+// Start with base context
+const baseContext = defineContext(
+  z.object({
+    userId: z.string(),
+  })
+);
+
+// Add storage
+const withStorageContext = withStorage(baseContext, storage);
+
+// Add rate limiting (which also uses storage)
+const fullContext = withRateLimit(withStorageContext, {
+  storage: rateLimitStorage,
+});
+
+// Now rules have access to both storage and rateLimit tools
+const rule = defineRule(fullContext, 'my-rule', async (input, { tools }) => {
+  // tools.storage is available
+  // tools.rateLimit is available
+});
+```
+
+## Type Safety with Tools
+
+Tools are fully type-safe:
+
+```typescript
+const context = defineContext(
+  z.object({ userId: z.string() }),
+  {
+    tools: {
+      logger: console,
+      database: dbClient,
+    },
+  }
+);
+
+const rule = defineRule(context, 'my-rule', async (input, { tools }) => {
+  // TypeScript knows the exact type of tools.logger
+  // TypeScript knows the exact type of tools.database
+  // tools.invalidTool would be a TypeScript error
+});
+```
+
+## Available Extensions
+
+Bantai provides several official extensions:
+
+- **[Storage Extension](/docs/extensions/with-storage)** - Add storage capabilities
+- **[Rate Limiting Extension](/docs/extensions/with-rate-limit)** - Add rate limiting
+- **[Redis Storage](/docs/extensions/storage-redis)** - Production Redis storage
+
+## Creating Custom Tools
+
+You can create custom tools for your specific needs:
+
+```typescript
+const customContext = defineContext(
+  z.object({
+    userId: z.string(),
+  }),
+  {
+    tools: {
+      analytics: {
+        track: (event: string, data: any) => {
+          // Track analytics event
+        },
+      },
+      cache: {
+        get: async (key: string) => {
+          // Get from cache
+        },
+        set: async (key: string, value: any) => {
+          // Set in cache
+        },
+      },
+    },
+  }
+);
+```
+
+## Best Practices
+
+1. **Use Extensions**: Prefer official extensions over custom implementations
+2. **Keep Tools Focused**: Each tool should have a clear purpose
+3. **Type Your Tools**: Ensure tools are properly typed for TypeScript support
+4. **Document Tools**: Document what each tool does and how to use it
+
+## Related Concepts
+
+- **[Context](/docs/concepts/context)** - Tools are added to contexts
+- **[Rules](/docs/concepts/rules)** - Rules use tools during evaluation
+- **[Extensions](/docs/extensions/with-rate-limit)** - Learn about official extensions
+

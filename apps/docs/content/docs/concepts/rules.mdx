@@ -1,0 +1,128 @@
+---
+title: Rules
+description: The building blocks that make decisions
+---
+
+# Rules
+
+Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()`.
+
+## Basic Rule
+
+A simple rule checks a condition and returns a result:
+
+```typescript
+import { defineRule, allow, deny } from '@bantai-dev/core';
+
+const adminRule = defineRule(
+  appContext,
+  'check-admin',
+  async (input) => {
+    if (input.role === 'admin') {
+      return allow({ reason: 'User is admin' });
+    }
+    return deny({ reason: 'Admin access required' });
+  }
+);
+```
+
+## Rules with Hooks
+
+Rules can have hooks that execute on allow or deny:
+
+```typescript
+const adminRule = defineRule(
+  appContext,
+  'check-admin',
+  async (input) => {
+    if (input.role === 'admin') {
+      return allow({ reason: 'User is admin' });
+    }
+    return deny({ reason: 'Admin access required' });
+  },
+  {
+    onAllow: async (input, { tools }) => {
+      console.log(`Admin access granted to ${input.userId}`);
+    },
+    onDeny: async (input, { tools }) => {
+      console.log(`Admin access denied to ${input.userId}`);
+    },
+  }
+);
+```
+
+Hooks are useful for:
+- Logging access attempts
+- Updating counters
+- Sending notifications
+- Performing side effects
+
+## Async Rules
+
+Rules can be asynchronous and perform async operations:
+
+```typescript
+const asyncRule = defineRule(
+  appContext,
+  'check-database',
+  async (input, { tools }) => {
+    const user = await tools.database.getUser(input.userId);
+    if (user?.active) {
+      return allow({ reason: 'User is active' });
+    }
+    return deny({ reason: 'User is not active' });
+  }
+);
+```
+
+## Using Tools in Rules
+
+Rules can access tools from the context:
+
+```typescript
+const rule = defineRule(
+  contextWithStorage,
+  'check-cache',
+  async (input, { tools }) => {
+    const cached = await tools.storage.get(`user:${input.userId}`);
+    if (cached) {
+      return allow({ reason: 'Found in cache' });
+    }
+    return deny({ reason: 'Not in cache' });
+  }
+);
+```
+
+## Rule Result
+
+Rules must return a `RuleResult` using `allow()` or `deny()`:
+
+```typescript
+// Allow with optional reason
+return allow({ reason: 'User is valid' });
+return allow(); // Reason defaults to null
+
+// Deny with optional reason
+return deny({ reason: 'User is invalid' });
+return deny(); // Reason defaults to null
+```
+
+The reason is useful for:
+- Debugging
+- User feedback
+- Logging
+- Understanding why a rule passed or failed
+
+## Best Practices
+
+1. **Keep Rules Focused**: Each rule should check one specific thing
+2. **Provide Clear Reasons**: Help with debugging and user feedback
+3. **Use Tools for Side Effects**: Keep rule logic pure, use hooks for side effects
+4. **Handle Errors Gracefully**: Return deny with a reason if something goes wrong
+
+## Related Concepts
+
+- **[Context](/docs/concepts/context)** - Rules are defined within a context
+- **[Policies](/docs/concepts/policies)** - Rules are combined into policies
+- **[Tools Integration](/docs/concepts/tools-integration)** - Extend rules with tools
+

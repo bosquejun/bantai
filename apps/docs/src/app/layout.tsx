@@ -1,7 +1,8 @@
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import './global.css';
-import { Plus_Jakarta_Sans, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import type { Metadata } from 'next';
+import { JetBrains_Mono, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+import './global.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -34,7 +35,7 @@ export default function Layout({ children }: LayoutProps<'/'>) {
       suppressHydrationWarning
     >
       <body className="flex flex-col min-h-screen antialiased overflow-x-hidden noise">
-        <RootProvider>{children}</RootProvider>
+        <RootProvider><TooltipProvider>{children}</TooltipProvider></RootProvider>
       </body>
     </html>
   );

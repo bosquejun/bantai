@@ -1,0 +1,141 @@
+---
+title: Basic Validation
+description: Age eligibility and password validation examples
+---
+
+# Basic Validation
+
+Examples of basic validation use cases with Bantai.
+
+## Age Eligibility
+
+Age validation and eligibility checks:
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+
+const ageContext = defineContext(
+  z.object({
+    age: z.number().min(0).max(150),
+    country: z.string().optional(),
+  })
+);
+
+const minimumAgeRule = defineRule(
+  ageContext,
+  'minimum-age',
+  async (input) => {
+    if (input.age >= 18) {
+      return allow({ reason: 'User meets minimum age requirement' });
+    }
+    return deny({ reason: 'User must be 18 or older' });
+  }
+);
+
+const countryAgeRule = defineRule(
+  ageContext,
+  'country-age',
+  async (input) => {
+    if (!input.country) {
+      return allow(); // Skip if country not provided
+    }
+    
+    // Country-specific age requirements
+    const requirements: Record<string, number> = {
+      US: 21, // Alcohol
+      UK: 18,
+      JP: 20,
+    };
+    
+    const requiredAge = requirements[input.country] || 18;
+    if (input.age >= requiredAge) {
+      return allow({ reason: `User meets ${input.country} age requirement` });
+    }
+    return deny({ reason: `User must be ${requiredAge} or older in ${input.country}` });
+  }
+);
+
+const agePolicy = definePolicy(
+  ageContext,
+  'age-eligibility-policy',
+  [minimumAgeRule, countryAgeRule],
+  {
+    defaultStrategy: 'preemptive', // Fail fast on age check
+  }
+);
+
+// Usage
+const result = await evaluatePolicy(agePolicy, {
+  age: 20,
+  country: 'US',
+});
+```
+
+## Password Validation
+
+Comprehensive password validation with exhaustive strategy:
+
+```typescript
+const passwordContext = defineContext(
+  z.object({
+    password: z.string(),
+  })
+);
+
+const lengthRule = defineRule(
+  passwordContext,
+  'password-length',
+  async (input) => {
+    if (input.password.length >= 8 && input.password.length <= 128) {
+      return allow({ reason: 'Password length is valid' });
+    }
+    return deny({ reason: 'Password must be between 8 and 128 characters' });
+  }
+);
+
+const complexityRule = defineRule(
+  passwordContext,
+  'password-complexity',
+  async (input) => {
+    const hasUpper = /[A-Z]/.test(input.password);
+    const hasLower = /[a-z]/.test(input.password);
+    const hasNumber = /\d/.test(input.password);
+    const hasSpecial = /[!@#$%^&*]/.test(input.password);
+    
+    if (hasUpper && hasLower && hasNumber && hasSpecial) {
+      return allow({ reason: 'Password meets complexity requirements' });
+    }
+    
+    const missing = [];
+    if (!hasUpper) missing.push('uppercase letter');
+    if (!hasLower) missing.push('lowercase letter');
+    if (!hasNumber) missing.push('number');
+    if (!hasSpecial) missing.push('special character');
+    
+    return deny({ reason: `Password missing: ${missing.join(', ')}` });
+  }
+);
+
+const passwordPolicy = definePolicy(
+  passwordContext,
+  'password-validation-policy',
+  [lengthRule, complexityRule],
+  {
+    defaultStrategy: 'exhaustive', // Collect all validation errors
+  }
+);
+```
+
+## Related Examples
+
+- **[Access Control](/docs/examples/access-control)** - Role-based access control
+- **[Business Logic](/docs/examples/business-logic)** - Complex validation scenarios
+

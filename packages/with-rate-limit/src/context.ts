@@ -12,7 +12,7 @@ export const windowMsSchema = z.string().refine((value) => {
 
 export const rateLimitSchema = z.object({
     rateLimit: z.object({
-        key: z.string(),
+        key: z.string().optional(),
     }).and(z.discriminatedUnion('type', [
         z.object({
           type: z.literal('token-bucket'),

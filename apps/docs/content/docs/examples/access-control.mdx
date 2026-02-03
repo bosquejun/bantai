@@ -1,0 +1,79 @@
+---
+title: Access Control
+description: Role-based access control (RBAC) examples
+---
+
+# Access Control
+
+Examples of access control and authorization using Bantai.
+
+## Role-Based Access Control (RBAC)
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+
+const rbacContext = defineContext(
+  z.object({
+    userId: z.string(),
+    role: z.enum(['admin', 'user', 'guest']),
+    resource: z.string(),
+    action: z.string(),
+  })
+);
+
+const roleCheckRule = defineRule(
+  rbacContext,
+  'role-check',
+  async (input) => {
+    const permissions: Record<string, string[]> = {
+      admin: ['read', 'write', 'delete', 'admin'],
+      user: ['read', 'write'],
+      guest: ['read'],
+    };
+    
+    const userPermissions = permissions[input.role] || [];
+    if (userPermissions.includes(input.action)) {
+      return allow({ reason: `Role ${input.role} has permission for ${input.action}` });
+    }
+    return deny({ reason: `Role ${input.role} does not have permission for ${input.action}` });
+  }
+);
+
+const resourceOwnershipRule = defineRule(
+  rbacContext,
+  'resource-ownership',
+  async (input) => {
+    // Check if user owns the resource
+    // This would typically query a database
+    const isOwner = await checkOwnership(input.userId, input.resource);
+    
+    if (isOwner || input.role === 'admin') {
+      return allow({ reason: 'User owns resource or is admin' });
+    }
+    return deny({ reason: 'User does not own resource' });
+  }
+);
+
+const rbacPolicy = definePolicy(
+  rbacContext,
+  'rbac-policy',
+  [roleCheckRule, resourceOwnershipRule],
+  {
+    defaultStrategy: 'preemptive', // Fail fast on access denial
+  }
+);
+```
+
+## Related Examples
+
+- **[Resource Management](/docs/examples/resource-management)** - Rate limiting
+- **[Business Logic](/docs/examples/business-logic)** - Complex authorization scenarios
+

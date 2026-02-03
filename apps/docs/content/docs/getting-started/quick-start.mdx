@@ -1,0 +1,192 @@
+---
+title: Quick Start
+description: Create your first policy in minutes
+---
+
+# Quick Start
+
+Get up and running with Bantai in just a few minutes. This guide will walk you through creating your first policy.
+
+## Your First Policy
+
+Let's create a simple age verification policy to get familiar with Bantai's core concepts.
+
+### Step 1: Define a Context
+
+A context defines the schema of data available when evaluating rules. It uses Zod for validation:
+
+```typescript
+import { z } from 'zod';
+import { defineContext } from '@bantai-dev/core';
+
+const ageContext = defineContext(
+  z.object({
+    age: z.number().min(0).max(150),
+  })
+);
+```
+
+### Step 2: Create a Rule
+
+Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()`:
+
+```typescript
+import { defineRule, allow, deny } from '@bantai-dev/core';
+
+const ageVerificationRule = defineRule(
+  ageContext,
+  'age-verification',
+  async (input) => {
+    if (input.age >= 18) {
+      return allow({ reason: 'User is of legal age' });
+    }
+    return deny({ reason: 'User must be 18 or older' });
+  }
+);
+```
+
+### Step 3: Define a Policy
+
+Policies combine multiple rules and define an evaluation strategy:
+
+```typescript
+import { definePolicy } from '@bantai-dev/core';
+
+const agePolicy = definePolicy(
+  ageContext,
+  'age-verification-policy',
+  [ageVerificationRule],
+  {
+    defaultStrategy: 'preemptive', // Stops at first violation
+  }
+);
+```
+
+### Step 4: Evaluate the Policy
+
+Now you can evaluate the policy with real data:
+
+```typescript
+import { evaluatePolicy } from '@bantai-dev/core';
+
+const result = await evaluatePolicy(agePolicy, { age: 25 });
+
+console.log(result.decision); // 'allow' or 'deny'
+console.log(result.reason); // 'policy_enforced' or 'policy_violated'
+console.log(result.violatedRules); // Array of violated rules
+```
+
+## Complete Example
+
+Here's the complete example put together:
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+
+// 1. Define context schema
+const ageContext = defineContext(
+  z.object({
+    age: z.number().min(0).max(150),
+  })
+);
+
+// 2. Define a rule
+const ageVerificationRule = defineRule(
+  ageContext,
+  'age-verification',
+  async (input) => {
+    if (input.age >= 18) {
+      return allow({ reason: 'User is of legal age' });
+    }
+    return deny({ reason: 'User must be 18 or older' });
+  }
+);
+
+// 3. Define a policy
+const agePolicy = definePolicy(
+  ageContext,
+  'age-verification-policy',
+  [ageVerificationRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+
+// 4. Evaluate policy
+const result = await evaluatePolicy(agePolicy, { age: 25 });
+
+if (result.decision === 'allow') {
+  console.log('Access granted!');
+} else {
+  console.log('Access denied:', result.violatedRules);
+}
+```
+
+## Core Workflow
+
+The Bantai workflow follows these five phases:
+
+1. **Define Context** - Use `defineContext()` to establish your schema requirements
+2. **Craft Rules** - Write individual validation rules that return typed `allow()` or `deny()` responses
+3. **Compose Policies** - Group multiple rules into a single policy with custom evaluation strategies
+4. **Execute Evaluation** - Trigger `evaluatePolicy()` with real-time data to get an instant decision
+5. **Handle Results** - Utilize `decision` and `violatedRules` arrays to power your application's logic
+
+## Evaluation Strategies
+
+Bantai supports two evaluation strategies:
+
+### Preemptive Strategy
+
+Stops at the first violation. Best for security checks and fast rejection:
+
+```typescript
+const policy = definePolicy(context, 'security-policy', [rule1, rule2], {
+  defaultStrategy: 'preemptive',
+});
+```
+
+### Exhaustive Strategy
+
+Collects all violations. Best for form validation and comprehensive feedback:
+
+```typescript
+const policy = definePolicy(context, 'validation-policy', [rule1, rule2], {
+  defaultStrategy: 'exhaustive',
+});
+```
+
+## Type Safety
+
+Bantai provides full TypeScript type safety:
+
+- **Context Types**: Inferred from Zod schemas
+- **Rule Types**: Type-safe rule evaluation functions
+- **Policy Types**: Only valid rule IDs can be referenced in policies
+- **Input Types**: TypeScript ensures all required context fields are provided
+
+```typescript
+// TypeScript will enforce that only valid context fields are used
+const result = await evaluatePolicy(agePolicy, {
+  age: 25, // ✅ TypeScript ensures this field exists
+  // invalidField: 'test', // ❌ TypeScript error
+});
+```
+
+## Next Steps
+
+Now that you've created your first policy, explore more:
+
+- **[Concepts](/docs/concepts)** - Learn about contexts, rules, policies, and type safety
+- **[API Reference](/docs/api-reference)** - Complete API documentation
+- **[Examples](/docs/examples)** - Real-world examples and use cases
+- **[Extensions](/docs/extensions/with-rate-limit)** - Add rate limiting, storage, and more
+

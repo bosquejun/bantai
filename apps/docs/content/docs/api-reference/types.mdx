@@ -1,0 +1,169 @@
+---
+title: Types
+description: Type definitions for contexts, rules, policies, and results
+---
+
+# Types
+
+Type definitions for contexts, rules, policies, and results in Bantai.
+
+## `ContextDefinition`
+
+Type representing a context definition.
+
+```typescript
+type ContextDefinition<
+  T extends z.ZodRawShape,
+  TTools extends Record<string, unknown> = {}
+> = {
+  schema: z.ZodObject<T>;
+  defaultValues: Partial<z.infer<z.ZodObject<T>>>;
+  tools: TTools;
+}
+```
+
+**Properties:**
+
+- `schema`: Zod object schema
+- `defaultValues`: Partial default values for context fields
+- `tools`: Tools object available to rules
+
+---
+
+## `RuleDefinition`
+
+Type representing a rule definition.
+
+```typescript
+type RuleDefinition<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+  TName extends string = string
+> = {
+  name: TName;
+  evaluate: (input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>) => Promise<RuleResult>;
+  hooks: {
+    onAllow?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;
+    onDeny?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;
+  };
+}
+```
+
+**Properties:**
+
+- `name`: Rule identifier
+- `evaluate`: Async function that evaluates the rule
+- `hooks`: Optional hooks for side effects
+
+---
+
+## `PolicyDefinition`
+
+Type representing a policy definition.
+
+```typescript
+type PolicyDefinition<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+  TName extends string,
+  TRules extends readonly RuleDefinition<TContext, string>[]
+> = {
+  name: TName;
+  rules: Map<string, TRules[number]> & {
+    get<K extends ExtractRuleName<TRules[number]>>(key: K): RulesMap<TRules>[K] | undefined;
+    has<K extends ExtractRuleName<TRules[number]>>(key: K): boolean;
+  };
+  context: TContext;
+  options: {
+    defaultStrategy: PolicyStrategy;
+  };
+}
+```
+
+**Properties:**
+
+- `name`: Policy identifier
+- `rules`: Map of rules with type-safe accessors
+- `context`: Context used by the policy
+- `options`: Policy configuration including default strategy
+
+---
+
+## `RuleResult`
+
+Type representing the result of a rule evaluation.
+
+```typescript
+type RuleResult = {
+  allowed: boolean;
+  reason: string | null;
+}
+```
+
+**Properties:**
+
+- `allowed`: `true` if rule allows, `false` if rule denies
+- `reason`: Optional reason message
+
+---
+
+## `PolicyResult`
+
+Type representing the result of a policy evaluation.
+
+```typescript
+type PolicyResult = {
+  decision: 'allow' | 'deny';
+  reason: 'policy_violated' | 'policy_enforced' | 'policy_not_found' | 'rule_not_found' | null;
+  violatedRules: ViolatedRule[];
+  strategy: 'preemptive' | 'exhaustive';
+}
+```
+
+**Properties:**
+
+- `decision`: Final decision (`'allow'` or `'deny'`)
+- `reason`: Reason for the decision
+  - `'policy_enforced'`: All rules passed
+  - `'policy_violated'`: One or more rules failed
+  - `'policy_not_found'`: Policy not found (should not occur)
+  - `'rule_not_found'`: Rule not found (should not occur)
+- `violatedRules`: Array of violated rules
+- `strategy`: Strategy used for evaluation
+
+---
+
+## `ViolatedRule`
+
+Type representing a violated rule.
+
+```typescript
+type ViolatedRule = {
+  name: string;
+  result: RuleResult;
+}
+```
+
+**Properties:**
+
+- `name`: Name of the violated rule
+- `result`: Rule result that caused the violation
+
+---
+
+## `PolicyStrategy`
+
+Type representing evaluation strategy.
+
+```typescript
+type PolicyStrategy = 'preemptive' | 'exhaustive'
+```
+
+**Values:**
+
+- `'preemptive'`: Stops at first violation (fail-fast)
+- `'exhaustive'`: Collects all violations
+
+## Related Documentation
+
+- **[Functions](/docs/api-reference/functions)** - Functions that use these types
+- **[Utility Types](/docs/api-reference/utility-types)** - Helper types for working with contexts
+

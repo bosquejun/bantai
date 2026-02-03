@@ -1,0 +1,222 @@
+---
+title: Contributing
+description: How to contribute to Bantai
+---
+
+# Contributing
+
+We welcome contributions to Bantai! This guide will help you get started with contributing to the project.
+
+## Development Setup
+
+This project uses [Turborepo](https://turborepo.org/) for monorepo management and [pnpm](https://pnpm.io/) as the package manager.
+
+### Prerequisites
+
+- Node.js >= 18
+- pnpm >= 9.0.0
+
+### Setup
+
+1. **Clone the repository**
+
+```bash
+git clone https://github.com/bosquejun/bantai.git
+cd bantai
+```
+
+2. **Install dependencies**
+
+```bash
+pnpm install
+```
+
+3. **Build all packages**
+
+```bash
+pnpm build
+```
+
+4. **Run tests**
+
+```bash
+# Run tests for a specific package
+cd packages/core && pnpm test
+
+# Or run all tests from root
+pnpm test
+```
+
+5. **Run type checking**
+
+```bash
+pnpm check-types
+```
+
+6. **Format code**
+
+```bash
+pnpm format
+```
+
+## Project Structure
+
+```text
+bantai-dev/
+├── packages/
+│   ├── core/              # Main policy evaluation library
+│   ├── with-rate-limit/   # Rate limiting plugin
+│   ├── with-storage/      # Storage plugin
+│   ├── storage-redis/     # Redis storage adapter
+├── apps/
+│   └── docs/              # Documentation site
+└── turbo.json            # Turborepo configuration
+```
+
+## Code Style Guidelines
+
+- **TypeScript**: We use TypeScript with strict type checking
+- **Formatting**: Code is formatted using the project's formatting rules
+- **Linting**: ESLint is used for code quality
+- **Testing**: All code should include appropriate tests
+
+### TypeScript
+
+- Use explicit types where helpful
+- Leverage TypeScript's type inference where appropriate
+- Follow the existing code style in each package
+
+### Testing
+
+- Write tests for all new features
+- Ensure existing tests pass before submitting
+- Use descriptive test names
+
+## How to Submit Pull Requests
+
+1. **Fork the repository**
+
+2. **Create a feature branch**
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
+3. **Make your changes**
+
+   - Write your code
+   - Add tests
+   - Update documentation if needed
+   - Ensure all tests pass
+   - Run type checking
+
+4. **Commit your changes**
+
+   Follow our commit message conventions (see below).
+
+5. **Push to your fork**
+
+```bash
+git push origin feature/your-feature-name
+```
+
+6. **Create a Pull Request**
+
+   - Provide a clear description of your changes
+   - Reference any related issues
+   - Ensure CI checks pass
+
+## Commit Message Conventions
+
+We follow conventional commit message format:
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Types
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
+
+### Examples
+
+```
+feat(core): add support for custom rule hooks
+
+Add onAllow and onDeny hooks to rule definitions
+for executing side effects.
+
+Closes #123
+```
+
+```
+fix(storage): handle TTL expiration correctly
+
+Fix issue where TTL was not properly applied
+to stored values in memory storage.
+```
+
+## Development Workflow
+
+### Working on Core Package
+
+```bash
+cd packages/core
+pnpm test:watch  # Watch mode for tests
+pnpm build      # Build the package
+```
+
+### Working on Documentation
+
+```bash
+cd apps/docs
+pnpm dev        # Start development server
+```
+
+### Running All Tests
+
+```bash
+# From root directory
+pnpm test
+```
+
+## Code of Conduct
+
+This project adheres to a [Code of Conduct](./CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the project maintainers.
+
+## Getting Help
+
+- **Issues**: Open an issue on GitHub for bugs or feature requests
+- **Discussions**: Use GitHub Discussions for questions
+- **Documentation**: Check the documentation for usage examples
+
+## Areas for Contribution
+
+We welcome contributions in the following areas:
+
+- **Bug fixes**: Fix issues reported in GitHub Issues
+- **New features**: Propose and implement new features
+- **Documentation**: Improve documentation and add examples
+- **Tests**: Add test coverage
+- **Performance**: Optimize existing code
+- **Examples**: Add more example use cases
+
+## Review Process
+
+1. All pull requests require review
+2. Maintainers will review your code
+3. Address any feedback or requested changes
+4. Once approved, your PR will be merged
+
+Thank you for contributing to Bantai!
+

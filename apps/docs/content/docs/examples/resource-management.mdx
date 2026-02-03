@@ -1,0 +1,87 @@
+---
+title: Resource Management
+description: API rate limiting examples
+---
+
+# Resource Management
+
+Examples of resource management and rate limiting using Bantai.
+
+## API Rate Limiting
+
+Using the rate limiting extension:
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+import { withRateLimit, createMemoryStorage, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+
+const apiContext = defineContext(
+  z.object({
+    userId: z.string(),
+    endpoint: z.string(),
+  })
+);
+
+const rateLimitedContext = withRateLimit(apiContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+});
+
+const rateLimitRule = defineRule(
+  rateLimitedContext,
+  'check-rate-limit',
+  async (input, { tools }) => {
+    const result = await tools.rateLimit.checkRateLimit(
+      tools.storage,
+      {
+        key: `api:${input.userId}:${input.endpoint}`,
+        type: 'fixed-window',
+        limit: 100,
+        windowMs: '1h',
+      }
+    );
+    
+    if (!result.allowed) {
+      return deny({ reason: result.reason || 'Rate limit exceeded' });
+    }
+    
+    return allow({ reason: `Rate limit OK: ${result.remaining} remaining` });
+  },
+  {
+    onAllow: async (input, { tools }) => {
+      // Increment counter when request is allowed
+      await tools.rateLimit.incrementRateLimit(
+        tools.storage,
+        {
+          key: `api:${input.userId}:${input.endpoint}`,
+          type: 'fixed-window',
+          limit: 100,
+          windowMs: '1h',
+        }
+      );
+    },
+  }
+);
+
+const rateLimitPolicy = definePolicy(
+  rateLimitedContext,
+  'api-rate-limit-policy',
+  [rateLimitRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+```
+
+## Related Examples
+
+- **[Using Storage](/docs/examples/using-storage)** - Storage-based examples
+- **[Rate Limiting Extension](/docs/extensions/with-rate-limit)** - Learn more about rate limiting
+

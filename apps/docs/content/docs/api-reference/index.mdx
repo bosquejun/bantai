@@ -1,0 +1,96 @@
+---
+title: API Reference
+description: Complete API documentation for Bantai core functions
+---
+
+# API Reference
+
+Complete API documentation for all Bantai core functions and types.
+
+## Overview
+
+Bantai provides a set of core functions and types for building policy evaluation systems:
+
+- **[Functions](/docs/api-reference/functions)** - Core functions for creating contexts, rules, and policies
+- **[Types](/docs/api-reference/types)** - Type definitions for contexts, rules, policies, and results
+- **[Utility Types](/docs/api-reference/utility-types)** - Helper types for extracting context information
+- **[Function Signatures](/docs/api-reference/function-signatures)** - Type signatures for rule and hook functions
+
+## Quick Reference
+
+### Core Functions
+
+- `defineContext` - Create a context definition
+- `defineRule` - Define a rule within a context
+- `definePolicy` - Define a policy that combines rules
+- `evaluatePolicy` - Evaluate a policy against input
+- `allow` - Create an allow result
+- `deny` - Create a deny result
+
+### Core Types
+
+- `ContextDefinition` - Context type
+- `RuleDefinition` - Rule type
+- `PolicyDefinition` - Policy type
+- `RuleResult` - Rule evaluation result
+- `PolicyResult` - Policy evaluation result
+- `ViolatedRule` - Violated rule information
+- `PolicyStrategy` - Evaluation strategy type
+
+## Complete Example
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+
+// Define context
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+// Define rules
+const ageRule = defineRule(context, 'age-check', async (input) => {
+  if (input.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18 or older' });
+});
+
+const userRule = defineRule(context, 'user-check', async (input) => {
+  if (input.userId.startsWith('admin')) {
+    return allow({ reason: 'User is admin' });
+  }
+  return deny({ reason: 'User is not admin' });
+});
+
+// Define policy
+const policy = definePolicy(context, 'access-policy', [ageRule, userRule], {
+  defaultStrategy: 'preemptive',
+});
+
+// Evaluate policy
+const result = await evaluatePolicy(policy, {
+  userId: 'admin123',
+  age: 25,
+});
+
+console.log(result.decision); // 'allow' or 'deny'
+console.log(result.violatedRules); // Array of violations
+```
+
+## Related Documentation
+
+- **[Concepts](/docs/concepts)** - Understand how these APIs work together
+- **[Examples](/docs/examples)** - See real-world usage examples
+- **[Getting Started](/docs/getting-started/quick-start)** - Learn the basics
+

@@ -1,0 +1,59 @@
+---
+title: Using Storage
+description: Session management and storage examples
+---
+
+# Using Storage
+
+Examples of using storage with Bantai for session management and caching.
+
+## Session Management
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+import { withStorage, createMemoryStorage } from '@bantai-dev/with-storage';
+
+const sessionSchema = z.object({
+  userId: z.string(),
+  expiresAt: z.number(),
+});
+
+const storage = createMemoryStorage(sessionSchema);
+const sessionContext = withStorage(
+  defineContext(z.object({ sessionId: z.string() })),
+  storage
+);
+
+const sessionRule = defineRule(
+  sessionContext,
+  'check-session',
+  async (input, { tools }) => {
+    const session = await tools.storage.get(input.sessionId);
+    
+    if (!session) {
+      return deny({ reason: 'Session not found' });
+    }
+    
+    if (session.expiresAt < Date.now()) {
+      await tools.storage.delete(input.sessionId);
+      return deny({ reason: 'Session expired' });
+    }
+    
+    return allow({ reason: 'Session valid' });
+  }
+);
+```
+
+## Related Examples
+
+- **[Resource Management](/docs/examples/resource-management)** - Rate limiting with storage
+- **[Storage Extension](/docs/extensions/with-storage)** - Learn more about storage
+

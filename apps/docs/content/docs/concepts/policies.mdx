@@ -1,0 +1,153 @@
+---
+title: Policies
+description: Combine multiple rules with evaluation strategies
+---
+
+# Policies
+
+Policies combine multiple rules and define an evaluation strategy.
+
+## Creating Policies
+
+A policy groups multiple rules together:
+
+```typescript
+import { definePolicy } from '@bantai-dev/core';
+
+const securityPolicy = definePolicy(
+  appContext,
+  'security-policy',
+  [authRule, permissionRule, rateLimitRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+```
+
+All rules in a policy must use the same context.
+
+## Evaluation Strategies
+
+Bantai supports two evaluation strategies:
+
+### Preemptive Strategy
+
+Preemptive strategy (fail-fast): Stops at first violation. Best for security checks and fast rejection:
+
+```typescript
+const securityPolicy = definePolicy(
+  appContext,
+  'security-policy',
+  [authRule, permissionRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+```
+
+When evaluating with preemptive strategy:
+
+```typescript
+const result = await evaluatePolicy(securityPolicy, {
+  userId: 'user123',
+  role: 'user',
+});
+
+// If authRule denies, permissionRule is never evaluated
+// result.violatedRules contains only the first violation
+```
+
+**Use preemptive when:**
+- Security is critical
+- You want fast rejection
+- First failure should stop evaluation
+- Performance is important
+
+### Exhaustive Strategy
+
+Exhaustive strategy: Collects all violations. Best for form validation and comprehensive feedback:
+
+```typescript
+const validationPolicy = definePolicy(
+  appContext,
+  'validation-policy',
+  [emailRule, passwordRule, termsRule],
+  {
+    defaultStrategy: 'exhaustive',
+  }
+);
+```
+
+When evaluating with exhaustive strategy:
+
+```typescript
+const result = await evaluatePolicy(validationPolicy, {
+  email: 'invalid',
+  password: 'weak',
+  termsAccepted: false,
+});
+
+// All rules are evaluated
+// result.violatedRules contains all violations
+```
+
+**Use exhaustive when:**
+- You want to show all errors to users
+- Form validation
+- Collecting comprehensive feedback
+- Multiple independent checks
+
+## Overriding Strategy
+
+You can override the default strategy when evaluating:
+
+```typescript
+// Use preemptive even though policy defaults to exhaustive
+const result = await evaluatePolicy(
+  validationPolicy,
+  { email: 'test@example.com' },
+  {
+    strategy: 'preemptive',
+  }
+);
+```
+
+This is useful when you want different behavior for specific evaluations while keeping the default for most cases.
+
+## Policy Results
+
+When you evaluate a policy, you get a `PolicyResult`:
+
+```typescript
+const result = await evaluatePolicy(policy, input);
+
+console.log(result.decision); // 'allow' or 'deny'
+console.log(result.reason); // 'policy_enforced' or 'policy_violated'
+console.log(result.violatedRules); // Array of violated rules
+console.log(result.strategy); // 'preemptive' or 'exhaustive'
+```
+
+### Violated Rules
+
+The `violatedRules` array contains information about each rule that failed:
+
+```typescript
+result.violatedRules.forEach((violation) => {
+  console.log(violation.name); // Rule name
+  console.log(violation.result.reason); // Why it failed
+});
+```
+
+## Best Practices
+
+1. **Choose the Right Strategy**: Preemptive for security, exhaustive for validation
+2. **Group Related Rules**: Keep related rules together in the same policy
+3. **Order Matters**: In preemptive mode, order rules by importance
+4. **Use Descriptive Names**: Policy names should clearly indicate their purpose
+
+## Related Concepts
+
+- **[Context](/docs/concepts/context)** - Policies use contexts to validate input
+- **[Rules](/docs/concepts/rules)** - Policies combine multiple rules
+- **[Best Practices](/docs/concepts/best-practices)** - Guidelines for effective policies
+

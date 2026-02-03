@@ -1,0 +1,91 @@
+---
+title: Function Signatures
+description: Type signatures for rule and hook functions
+---
+
+# Function Signatures
+
+Type signatures for rule evaluation functions and hooks.
+
+## `RuleEvaluateFnAsync`
+
+Type for rule evaluation functions.
+
+```typescript
+type RuleEvaluateFnAsync<
+  T extends z.ZodRawShape,
+  TTools extends Record<string, unknown> = {}
+> = (
+  input: z.infer<z.ZodObject<T>>,
+  context: {
+    tools: TTools;
+  }
+) => Promise<RuleResult>
+```
+
+**Parameters:**
+
+- `input`: Input data matching the context schema
+- `context`: Context object containing tools
+  - `tools`: Tools available to the rule
+
+**Returns:** `Promise<RuleResult>`
+
+**Example:**
+
+```typescript
+const evaluate: RuleEvaluateFnAsync<
+  { userId: z.ZodString; age: z.ZodNumber },
+  { logger: Console }
+> = async (input, { tools }) => {
+  tools.logger.log(`Checking user ${input.userId}`);
+  if (input.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18 or older' });
+};
+```
+
+---
+
+## `RuleHookFnAsync`
+
+Type for rule hook functions.
+
+```typescript
+type RuleHookFnAsync<
+  T extends z.ZodRawShape,
+  TTools extends Record<string, unknown> = {}
+> = (
+  input: z.infer<z.ZodObject<T>>,
+  context: {
+    tools: TTools;
+  }
+) => Promise<void>
+```
+
+**Parameters:**
+
+- `input`: Input data matching the context schema
+- `context`: Context object containing tools
+  - `tools`: Tools available to the hook
+
+**Returns:** `Promise<void>`
+
+**Example:**
+
+```typescript
+const onAllow: RuleHookFnAsync<
+  { userId: z.ZodString; age: z.ZodNumber },
+  { logger: Console }
+> = async (input, { tools }) => {
+  tools.logger.log(`Access granted to user ${input.userId}`);
+  // Perform side effects
+};
+```
+
+## Related Documentation
+
+- **[Functions](/docs/api-reference/functions)** - Functions that use these signatures
+- **[Types](/docs/api-reference/types)** - Related type definitions
+

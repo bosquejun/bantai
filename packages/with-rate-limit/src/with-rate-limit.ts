@@ -7,10 +7,37 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
 
   export type DefaultRateLimitValues =  Partial<z.infer<typeof rateLimitSchema['shape']['rateLimit']>>
 
+  /**
+   * Helper type that infers the merged context shape with rate limit schema
+   */
+  type WithRateLimitShape<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = 
+    ExtractContextShape<TContext> & RateLimitShape;
 
-  type WithRateLimitOptions = {
+    type RateLimitTools<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = typeof rateLimit & { generateKey?: (input: ExtractContextShape<TContext>) => string }
+
+  /**
+   * Helper type that infers the merged context tools with rate limit tools
+   */
+  type WithRateLimitTools<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = 
+    ExtractContextTools<TContext> & { 
+      rateLimit: RateLimitTools<TContext>, 
+      storage: RateLimitStorage,
+    };
+
+  /**
+   * Return type for withRateLimit that properly infers the merged context
+   */
+  export type WithRateLimitReturnType<
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>
+  > = ContextDefinition<
+    WithRateLimitShape<TContext>,
+    WithRateLimitTools<TContext>
+  >;
+
+  type WithRateLimitOptions<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = {
     defaultValues?: DefaultRateLimitValues;
     storage?: RateLimitStorage;
+    generateKey?: (input: ExtractContextShape<TContext>) => string;
   }
 
   /**
@@ -21,22 +48,19 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
     TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>
   >(
     context: TContext,
-    options: WithRateLimitOptions = {
+    options: WithRateLimitOptions<TContext> = {
     }
-  ): ContextDefinition<
-    ExtractContextShape<TContext> & RateLimitShape,
-    ExtractContextTools<TContext> & { 
-      rateLimit: typeof rateLimit, 
-      storage: RateLimitStorage,
-    }
-  > => {
+  ): WithRateLimitReturnType<TContext> => {
     // Merge the schemas at runtime
     const mergedSchema = context.schema.extend(rateLimitSchema.shape);
   
     return withStorage(defineContext(mergedSchema, {
       tools: {
         ...context.tools,
-        rateLimit,
+        rateLimit: {
+          ...rateLimit,
+          generateKey: options.generateKey,
+        },
         // Users should provide their own storage implementation
         // For development/testing, they can use a simple in-memory storage
         storage: options.storage,
@@ -49,12 +73,13 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
           }
         }
       }
-    }), options.storage) as ContextDefinition<
-      ExtractContextShape<TContext> & RateLimitShape,
-      ExtractContextTools<TContext> & { 
-        rateLimit: typeof rateLimit, 
-        storage: RateLimitStorage,
-      }
-    >;
+    }), options.storage) as WithRateLimitReturnType<TContext>;
   };
 
+
+  /**
+   * Type alias for a context extended with rate limiting capabilities
+   */
+  export type WithRateLimitContext<
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>
+  > = WithRateLimitReturnType<TContext>;

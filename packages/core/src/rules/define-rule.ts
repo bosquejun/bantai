@@ -20,6 +20,7 @@ export type RuleHookFnAsync<
   T extends z.ZodRawShape,
   TTools extends Record<string, unknown> = {}
 > = (
+  result: RuleResult,
   input: z.infer<z.ZodObject<T>>,
   context: RuleFnContextArgs<TTools>
 ) => Promise<void>;
@@ -46,13 +47,13 @@ export function defineRule<
     const evalFnSchema = ruleEvaluateFnSchema(context.schema)
 
     // Wrap the evaluate function to pass the context with tools
-    const wrappedEvaluate = async (input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>) => {
-        return await evaluate(input, { tools: context.tools as ExtractTools<TContext> });
+    const wrappedEvaluate = async (input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>,context: { tools: ExtractTools<TContext> }) => {
+        return await evaluate(input, context);
     };
 
     const hooksSchema = ruleHookFnSchema(context.schema);
-    const wrappedHook = (hook: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>) => async (input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>, context: { tools: ExtractTools<TContext> }) => {
-        return await hook(input, context);
+    const wrappedHook = (hook: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>) => async (result: RuleResult, input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>, context: { tools: ExtractTools<TContext> }) => {
+        return await hook(result, input, context);
     };
 
     const rule = ruleSchema.parse({

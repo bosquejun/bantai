@@ -1,0 +1,49 @@
+---
+title: Best Practices
+description: Guidelines and recommendations for using Bantai
+---
+
+# Best Practices
+
+Guidelines and recommendations for effectively using Bantai in your applications.
+
+## Strategy Selection
+
+1. **Use Preemptive Strategy** for critical checks that should fail fast (e.g., authentication, rate limiting)
+2. **Use Exhaustive Strategy** for validation where you want to show all errors (e.g., form validation, quota information)
+
+## Code Organization
+
+1. **Provide Clear Reasons** in your `allow()` and `deny()` calls to help with debugging and user feedback
+2. **Keep Rules Focused** - each rule should check one specific thing
+3. **Use Context Defaults** for optional fields with sensible defaults
+4. **Leverage Extensions** for common functionality like storage and rate limiting
+
+## Example: Preemptive Strategy
+
+```typescript
+// Good for security checks
+const securityPolicy = definePolicy(context, 'security', [authRule, permissionRule], {
+  defaultStrategy: 'preemptive', // Fail fast
+});
+```
+
+## Example: Exhaustive Strategy
+
+```typescript
+// Good for form validation
+const validationPolicy = definePolicy(
+  context,
+  'validation',
+  [emailRule, passwordRule, termsRule],
+  {
+    defaultStrategy: 'exhaustive', // Collect all errors
+  }
+);
+```
+
+## Related Documentation
+
+- **[Concepts - Best Practices](/docs/concepts/best-practices)** - Detailed best practices guide
+- **[Examples](/docs/examples)** - See these practices in action
+

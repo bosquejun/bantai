@@ -1,0 +1,10 @@
+{
+  "pages": [
+    "index",
+    "functions",
+    "types",
+    "utility-types",
+    "function-signatures"
+  ]
+}
+

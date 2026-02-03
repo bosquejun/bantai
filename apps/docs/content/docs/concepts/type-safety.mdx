@@ -1,0 +1,148 @@
+---
+title: Type Safety
+description: Full TypeScript type safety throughout the evaluation process
+---
+
+# Type Safety
+
+Bantai provides full TypeScript type safety throughout the evaluation process, with type inference from Zod schemas.
+
+## Context Type Inference
+
+Context types are inferred from Zod schemas:
+
+```typescript
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+// TypeScript knows the input shape
+const rule = defineRule(context, 'my-rule', async (input) => {
+  // input.userId is typed as string
+  // input.age is typed as number
+  // input.invalidField would be a TypeScript error
+});
+```
+
+## Rule Type Safety
+
+Rules are type-safe and can only reference valid context fields:
+
+```typescript
+const rule = defineRule(
+  context,
+  'check-age',
+  async (input) => {
+    // TypeScript ensures input matches the context schema
+    if (input.age >= 18) {
+      return allow();
+    }
+    return deny();
+  }
+);
+```
+
+TypeScript will catch errors at compile time:
+
+```typescript
+const rule = defineRule(context, 'my-rule', async (input) => {
+  // ❌ TypeScript error: Property 'invalidField' does not exist
+  if (input.invalidField) {
+    return allow();
+  }
+});
+```
+
+## Policy Type Safety
+
+Policies ensure only valid rules from the same context can be included:
+
+```typescript
+const policy = definePolicy(
+  context,
+  'my-policy',
+  [rule1, rule2], // All rules must use the same context
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+```
+
+If you try to use rules from different contexts, TypeScript will error:
+
+```typescript
+// ❌ TypeScript error: Rules must use the same context
+const policy = definePolicy(
+  context1,
+  'my-policy',
+  [rule1, rule2FromDifferentContext],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+```
+
+## Evaluation Type Safety
+
+When evaluating policies, TypeScript ensures all required fields are provided:
+
+```typescript
+const result = await evaluatePolicy(policy, {
+  userId: 'user123', // ✅ Required field
+  age: 25, // ✅ Required field
+  // missingField: 'test', // ❌ TypeScript error if not in schema
+});
+```
+
+TypeScript will also prevent you from passing extra fields:
+
+```typescript
+// ❌ TypeScript error: Object literal may only specify known properties
+const result = await evaluatePolicy(policy, {
+  userId: 'user123',
+  age: 25,
+  extraField: 'not allowed', // TypeScript error
+});
+```
+
+## Tools Type Safety
+
+Tools are also type-safe:
+
+```typescript
+const context = defineContext(
+  z.object({ userId: z.string() }),
+  {
+    tools: {
+      logger: console,
+      database: dbClient,
+    },
+  }
+);
+
+const rule = defineRule(context, 'my-rule', async (input, { tools }) => {
+  // tools.logger is typed correctly
+  // tools.database is typed correctly
+  // tools.invalidTool would be a TypeScript error
+});
+```
+
+## Benefits
+
+Type safety provides several benefits:
+
+1. **Compile-time Error Detection**: Catch errors before runtime
+2. **Better IDE Support**: Autocomplete and IntelliSense work perfectly
+3. **Refactoring Safety**: Changes to schemas are caught by TypeScript
+4. **Self-documenting Code**: Types serve as documentation
+5. **Fewer Runtime Errors**: Type mismatches are caught at compile time
+
+## Related Concepts
+
+- **[Context](/docs/concepts/context)** - Contexts define the types
+- **[Rules](/docs/concepts/rules)** - Rules use type-safe inputs
+- **[Policies](/docs/concepts/policies)** - Policies ensure type consistency
+

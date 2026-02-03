@@ -1,0 +1,141 @@
+---
+title: Context
+description: Define the schema and tools available for evaluation
+---
+
+# Context
+
+A context defines the schema of data available when evaluating rules. It uses Zod for validation and can include default values and tools.
+
+## Basic Context
+
+The simplest context just defines a schema:
+
+```typescript
+import { z } from 'zod';
+import { defineContext } from '@bantai-dev/core';
+
+const appContext = defineContext(
+  z.object({
+    userId: z.string(),
+    role: z.enum(['admin', 'user']),
+    timestamp: z.number(),
+  })
+);
+```
+
+## Context with Default Values
+
+You can provide default values for optional fields:
+
+```typescript
+const appContext = defineContext(
+  z.object({
+    userId: z.string(),
+    role: z.enum(['admin', 'user']),
+    timestamp: z.number(),
+  }),
+  {
+    defaultValues: {
+      timestamp: Date.now(), // Default value
+    },
+  }
+);
+```
+
+When evaluating a policy, default values are automatically merged with the input:
+
+```typescript
+const result = await evaluatePolicy(policy, {
+  userId: 'user123',
+  role: 'admin',
+  // timestamp will use the default value
+});
+```
+
+## Context with Tools
+
+Contexts can include tools that are available to rules during evaluation:
+
+```typescript
+const appContext = defineContext(
+  z.object({
+    userId: z.string(),
+  }),
+  {
+    tools: {
+      logger: {
+        log: (message: string) => console.log(message),
+      },
+      database: {
+        getUser: async (id: string) => {
+          // Fetch user from database
+        },
+      },
+    },
+  }
+);
+```
+
+Tools are accessed in rules through the second parameter:
+
+```typescript
+const rule = defineRule(
+  appContext,
+  'check-user',
+  async (input, { tools }) => {
+    const user = await tools.database.getUser(input.userId);
+    tools.logger.log(`Checking user: ${input.userId}`);
+    // ...
+  }
+);
+```
+
+## Combining Default Values and Tools
+
+You can combine both default values and tools:
+
+```typescript
+const appContext = defineContext(
+  z.object({
+    userId: z.string(),
+    timestamp: z.number(),
+  }),
+  {
+    defaultValues: {
+      timestamp: Date.now(),
+    },
+    tools: {
+      logger: console,
+      database: dbClient,
+    },
+  }
+);
+```
+
+## Type Safety
+
+Context types are inferred from Zod schemas:
+
+```typescript
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+// TypeScript knows the input shape
+const rule = defineRule(context, 'my-rule', async (input) => {
+  // input.userId is typed as string
+  // input.age is typed as number
+  // input.invalidField would be a TypeScript error
+});
+```
+
+## Related Concepts
+
+- **[Rules](/docs/concepts/rules)** - Use contexts to define rules
+- **[Policies](/docs/concepts/policies)** - Policies use contexts to validate input
+- **[Tools Integration](/docs/concepts/tools-integration)** - Learn how to extend contexts with tools
+

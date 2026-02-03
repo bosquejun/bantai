@@ -1,0 +1,89 @@
+---
+title: Core Concepts
+description: Understand contexts, rules, policies, and how they work together
+---
+
+# Core Concepts
+
+This guide explains the fundamental concepts of Bantai: contexts, rules, policies, and how they work together to create powerful policy evaluation systems.
+
+## Overview
+
+Bantai is built around three core concepts that work together:
+
+1. **Contexts** - Define the schema and tools available for evaluation
+2. **Rules** - Individual validation checks that make allow/deny decisions
+3. **Policies** - Combine multiple rules with evaluation strategies
+
+## Key Concepts
+
+### [Context](/docs/concepts/context)
+
+A context defines the schema of data available when evaluating rules. It uses Zod for validation and can include default values and tools.
+
+### [Rules](/docs/concepts/rules)
+
+Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()` responses.
+
+### [Policies](/docs/concepts/policies)
+
+Policies combine multiple rules and define an evaluation strategy (preemptive or exhaustive).
+
+### [Type Safety](/docs/concepts/type-safety)
+
+Bantai provides full TypeScript type safety throughout the evaluation process, with type inference from Zod schemas.
+
+### [Tools Integration](/docs/concepts/tools-integration)
+
+Contexts can be extended with tools that provide additional functionality to rules. This is how extensions like storage and rate limiting work.
+
+### [Best Practices](/docs/concepts/best-practices)
+
+Guidelines for writing effective rules, choosing strategies, and leveraging Bantai's features.
+
+## Quick Example
+
+Here's a quick example showing how these concepts work together:
+
+```typescript
+import { z } from 'zod';
+import {
+  defineContext,
+  defineRule,
+  definePolicy,
+  evaluatePolicy,
+  allow,
+  deny,
+} from '@bantai-dev/core';
+
+// 1. Define Context
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  })
+);
+
+// 2. Define Rules
+const ageRule = defineRule(context, 'age-check', async (input) => {
+  if (input.age >= 18) {
+    return allow({ reason: 'User is of legal age' });
+  }
+  return deny({ reason: 'User must be 18 or older' });
+});
+
+// 3. Define Policy
+const policy = definePolicy(context, 'access-policy', [ageRule], {
+  defaultStrategy: 'preemptive',
+});
+
+// 4. Evaluate
+const result = await evaluatePolicy(policy, { userId: 'user123', age: 25 });
+```
+
+## Next Steps
+
+- **[API Reference](/docs/api-reference)** - Complete API documentation
+- **[Examples](/docs/examples)** - Real-world examples
+- **[Extensions](/docs/extensions/with-rate-limit)** - Learn about extensions
+

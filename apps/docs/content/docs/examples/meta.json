@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "index",
+    "basic-validation",
+    "access-control",
+    "resource-management",
+    "business-logic",
+    "using-storage",
+    "best-practices"
+  ]
+}
+

@@ -1,0 +1,244 @@
+---
+title: Functions
+description: Core functions for creating contexts, rules, and policies
+---
+
+# Functions
+
+Core functions for creating contexts, rules, and policies in Bantai.
+
+## `defineContext`
+
+Creates a context definition with a Zod schema.
+
+```typescript
+function defineContext<T extends z.ZodRawShape, TTools extends Record<string, unknown> = {}>(
+  schema: z.ZodObject<T>,
+  options?: {
+    defaultValues?: Partial<z.infer<z.ZodObject<T>>>;
+    tools?: TTools;
+  }
+): ContextDefinition<T, TTools>
+```
+
+**Parameters:**
+
+- `schema`: Zod object schema defining the context shape
+- `options?`: Optional configuration
+  - `defaultValues?`: Partial default values for context fields
+  - `tools?`: Tools object available to rules during evaluation
+
+**Returns:** `ContextDefinition<T, TTools>`
+
+**Example:**
+
+```typescript
+const context = defineContext(
+  z.object({
+    userId: z.string(),
+    age: z.number(),
+  }),
+  {
+    defaultValues: {
+      age: 0,
+    },
+    tools: {
+      logger: console,
+    },
+  }
+);
+```
+
+---
+
+## `defineRule`
+
+Defines a rule within a context.
+
+```typescript
+function defineRule<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+  TName extends string = string
+>(
+  context: TContext,
+  name: TName,
+  evaluate: RuleEvaluateFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>,
+  hooks?: {
+    onAllow?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;
+    onDeny?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;
+  }
+): RuleDefinition<TContext, TName>
+```
+
+**Parameters:**
+
+- `context`: Context definition
+- `name`: Rule identifier
+- `evaluate`: Async function that takes `(input, { tools })` and returns `Promise<RuleResult>`
+- `hooks?`: Optional hooks
+  - `onAllow?`: Executed when rule allows
+  - `onDeny?`: Executed when rule denies
+
+**Returns:** `RuleDefinition<TContext, TName>`
+
+**Example:**
+
+```typescript
+const rule = defineRule(
+  context,
+  'age-check',
+  async (input, { tools }) => {
+    if (input.age >= 18) {
+      return allow({ reason: 'User is of legal age' });
+    }
+    return deny({ reason: 'User must be 18 or older' });
+  },
+  {
+    onAllow: async (input) => {
+      console.log(`Access granted to user ${input.userId}`);
+    },
+    onDeny: async (input) => {
+      console.log(`Access denied to user ${input.userId}`);
+    },
+  }
+);
+```
+
+---
+
+## `definePolicy`
+
+Defines a policy that combines multiple rules.
+
+```typescript
+function definePolicy<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+  TName extends string,
+  TRules extends readonly RuleDefinition<TContext, string>[]
+>(
+  context: TContext,
+  name: TName,
+  rules: TRules,
+  options?: {
+    defaultStrategy?: PolicyStrategy;
+  }
+): PolicyDefinition<TContext, TName, TRules>
+```
+
+**Parameters:**
+
+- `context`: Context definition (must match all rules)
+- `name`: Policy identifier
+- `rules`: Array of rule definitions
+- `options?`: Optional configuration
+  - `defaultStrategy?`: `'preemptive'` or `'exhaustive'` (default: `'preemptive'`)
+
+**Returns:** `PolicyDefinition<TContext, TName, TRules>`
+
+**Example:**
+
+```typescript
+const policy = definePolicy(
+  context,
+  'security-policy',
+  [authRule, permissionRule, rateLimitRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
+```
+
+---
+
+## `evaluatePolicy`
+
+Evaluates a policy against a current context.
+
+```typescript
+function evaluatePolicy<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+  TPolicy extends PolicyDefinition<TContext, any, any>
+>(
+  policy: TPolicy,
+  input: ExtractPolicyContext<TPolicy>,
+  options?: {
+    strategy?: PolicyStrategy;
+  }
+): Promise<PolicyResult>
+```
+
+**Parameters:**
+
+- `policy`: Policy definition to evaluate
+- `input`: Context data to evaluate (must match policy's context schema)
+- `options?`: Optional configuration
+  - `strategy?`: Override policy's default strategy (`'preemptive'` or `'exhaustive'`)
+
+**Returns:** `Promise<PolicyResult>`
+
+**Example:**
+
+```typescript
+const result = await evaluatePolicy(
+  policy,
+  {
+    userId: 'user123',
+    age: 25,
+  },
+  {
+    strategy: 'exhaustive', // Override default strategy
+  }
+);
+```
+
+---
+
+## `allow`
+
+Helper function to create an allow result.
+
+```typescript
+function allow({ reason }: { reason?: string | null } = { reason: null }): RuleResult
+```
+
+**Parameters:**
+
+- `reason?`: Optional reason message (default: `null`)
+
+**Returns:** `RuleResult` with `allowed: true`
+
+**Example:**
+
+```typescript
+return allow({ reason: 'User is valid' });
+return allow(); // reason defaults to null
+```
+
+---
+
+## `deny`
+
+Helper function to create a deny result.
+
+```typescript
+function deny({ reason }: { reason?: string | null } = { reason: null }): RuleResult
+```
+
+**Parameters:**
+
+- `reason?`: Optional reason message (default: `null`)
+
+**Returns:** `RuleResult` with `allowed: false`
+
+**Example:**
+
+```typescript
+return deny({ reason: 'User is invalid' });
+return deny(); // reason defaults to null
+```
+
+## Related Documentation
+
+- **[Types](/docs/api-reference/types)** - Type definitions for these functions
+- **[Function Signatures](/docs/api-reference/function-signatures)** - Detailed type signatures
+

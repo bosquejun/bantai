@@ -13,7 +13,7 @@ export const ruleEvaluateFnSchema = <T extends z.ZodRawShape>(schema: z.ZodObjec
 }
 
 export const ruleHookFnSchema = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) => {
-    return z.function().input([schema,ruleFnContextSchema(schema)]).output(z.void());
+    return z.function().input([ruleResultSchema, schema, ruleFnContextSchema(schema)]).output(z.void());
 }
 
 export const ruleResultSchema = z.object({

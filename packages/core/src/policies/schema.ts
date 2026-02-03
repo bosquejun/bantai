@@ -20,9 +20,14 @@ export type PolicyStrategy = z.infer<typeof policyStrategySchema>;
 
 export const policyResultSchema = z.object({
     decision: z.enum(['allow', 'deny']),
+    isAllowed: z.boolean(),
     reason: z.enum(['policy_violated', 'policy_enforced']),
     violatedRules: z.array(z.object({
         name: z.string(),
+        result: ruleResultSchema,
+    })),
+    evaluatedRules: z.array(z.object({
+        rule: ruleSchema,
         result: ruleResultSchema,
     })),
     strategy: policyStrategySchema,
