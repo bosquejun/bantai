@@ -8,7 +8,8 @@ export function allow({reason}: {reason?: string | null} = {
 }): RuleResult {
     return ruleResultSchema.parse({
         allowed: true,
-        reason
+        reason,
+        skipped: false
     })
 }
 
@@ -17,7 +18,18 @@ export function deny({reason}: {reason?: string | null} = {
 }): RuleResult {
     return ruleResultSchema.parse({
         allowed: false,
-        reason
+        reason,
+        skipped: false
+    })
+}
+
+export function skip({reason}: {reason?: string | null} = {
+    reason: "skipped"
+}): RuleResult {
+    return ruleResultSchema.parse({
+        allowed: true,
+        reason,
+        skipped: true
     })
 }
 

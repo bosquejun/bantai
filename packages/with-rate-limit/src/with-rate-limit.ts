@@ -11,7 +11,7 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
    * Helper type that infers the merged context shape with rate limit schema
    */
   type WithRateLimitShape<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = 
-    ExtractContextShape<TContext> & RateLimitShape;
+    ExtractContextShape<TContext> & Partial<RateLimitShape>;
 
     type RateLimitTools<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = typeof rateLimit & { generateKey?: (input: ExtractContextShape<TContext>) => string }
 
@@ -52,27 +52,31 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
     }
   ): WithRateLimitReturnType<TContext> => {
     // Merge the schemas at runtime
-    const mergedSchema = context.schema.extend(rateLimitSchema.shape);
+    const mergedSchema = context.schema.extend(rateLimitSchema.partial().shape as z.ZodRawShape);
+
+    const defaultValues = {
+      ...context.defaultValues,
+      ...(Boolean(options.defaultValues) && {
+        rateLimit:{
+          ...(options.defaultValues || {}),
+        }
+      })
+    }
+
+    const tools = {
+      ...context.tools,
+      rateLimit: {
+        ...rateLimit,
+        generateKey: options.generateKey,
+      },
+      // Users should provide their own storage implementation
+      // For development/testing, they can use a simple in-memory storage
+      storage: options.storage,
+    }
   
     return withStorage(defineContext(mergedSchema, {
-      tools: {
-        ...context.tools,
-        rateLimit: {
-          ...rateLimit,
-          generateKey: options.generateKey,
-        },
-        // Users should provide their own storage implementation
-        // For development/testing, they can use a simple in-memory storage
-        storage: options.storage,
-      },
-      defaultValues: {
-        ...context.defaultValues,
-        ...options.defaultValues && {
-          rateLimit:{
-            ...options.defaultValues,
-          }
-        }
-      }
+      tools,
+      defaultValues
     }), options.storage) as WithRateLimitReturnType<TContext>;
   };
 

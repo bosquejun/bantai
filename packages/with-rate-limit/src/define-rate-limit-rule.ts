@@ -1,6 +1,7 @@
 import { ContextDefinition, ExtractContextShape, ExtractContextTools, defineRule, deny, type RuleDefinition, type RuleResult } from "@bantai-dev/core";
 import { z } from "zod";
 import { RateLimitShape, rateLimitSchema } from "./context.js";
+import { RateLimitCheckResult } from "./index.js";
 import { RateLimitStorage, rateLimit } from "./tools/rate-limit.js";
 
 /**
@@ -10,7 +11,7 @@ type RuleEvaluateFnAsync<
   T extends z.ZodRawShape,
   TTools extends Record<string, unknown> = {}
 > = (
-  input: z.infer<z.ZodObject<T>>,
+  input: z.infer<z.ZodObject<T>> & {currentLimit: RateLimitCheckResult},
   context: {
     tools: TTools;
   }
@@ -43,7 +44,7 @@ type ExtractRateLimitTools<TContext extends ContextDefinition<z.ZodRawShape, Rec
 type ExtractRateLimitInput<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = 
   TContext['schema'] extends z.ZodObject<infer TShape> 
     ? z.infer<z.ZodObject<TShape & RateLimitShape>> & {
-        rateLimit: z.infer<z.ZodObject<RateLimitShape>>['rateLimit'];
+        rateLimit: Partial<z.infer<z.ZodObject<RateLimitShape>>['rateLimit']>;
     }
     : never;
 
@@ -60,6 +61,7 @@ type DefineRateLimitRuleOptions<TContext> = {
    * Optional hook to run when the rule denies the request.
    */
   onDeny?: RuleHookFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>;
+config: Partial<z.infer<typeof rateLimitSchema>['rateLimit']>
 };
 
 /**
@@ -84,7 +86,7 @@ export const defineRateLimitRule = <
   context: TContext,
   name: TName,
   evaluate: RuleEvaluateFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>,
-  options?: DefineRateLimitRuleOptions<TContext>
+  options: DefineRateLimitRuleOptions<TContext>
 ): RuleDefinition<TContext, TName> => {
 if(!context.tools.rateLimit || !context.tools.storage) {
   throw new Error('Rate limit and storage are required. Please use the withRateLimit function to extend the context with rate limit capabilities.');
@@ -101,14 +103,20 @@ if(!context.tools.rateLimit || !context.tools.storage) {
       const typedInput = input as ExtractRateLimitInput<TContext>;
 
 
-      const key = typedInput.rateLimit.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`;
-      const rateLimitConfig = typedInput.rateLimit as z.infer<typeof rateLimitSchema>['rateLimit'];
+      const key = `${name}:${typedInput?.rateLimit?.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`}`;
+      const rateLimitConfig ={
+        ...typedInput.rateLimit,
+        ...options.config
+      }  as z.infer<typeof rateLimitSchema>['rateLimit'];
 
       // Only check rate limit for fixed-window and sliding-window types
       // Token-bucket is not yet supported by the rate limit helpers
+
+      let rateLimitResult: RateLimitCheckResult | undefined;
+
       if (rateLimitConfig.type === 'fixed-window' || rateLimitConfig.type === 'sliding-window') {
         // Check rate limit first
-        const rateLimitResult = await tools.rateLimit.checkRateLimit(
+        rateLimitResult = await tools.rateLimit.checkRateLimit(
           tools.storage,
           {
             ...rateLimitConfig,
@@ -123,7 +131,7 @@ if(!context.tools.rateLimit || !context.tools.storage) {
       }
 
       // Rate limit passed (or not applicable), evaluate the user's rule
-      return await evaluate(typedInput as z.infer<z.ZodObject<ExtractContextShape<TContext>>>, ctx);
+      return await evaluate({...typedInput, currentLimit: rateLimitResult} as z.infer<z.ZodObject<ExtractContextShape<TContext>>> & {currentLimit: RateLimitCheckResult}, ctx);
     },
     {
       onAllow: async (result, input, ctx) => {
@@ -135,9 +143,12 @@ if(!context.tools.rateLimit || !context.tools.storage) {
 
         const typedInput = input as ExtractRateLimitInput<TContext>;
 
-        const key = typedInput.rateLimit.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`;
+        const key = `${name}:${typedInput?.rateLimit?.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`}`;
 
-        const rateLimitConfig = typedInput.rateLimit as z.infer<typeof rateLimitSchema>['rateLimit'];
+        const rateLimitConfig ={
+          ...typedInput.rateLimit,
+          ...options.config
+        }  as z.infer<typeof rateLimitSchema>['rateLimit'];
 
         // Only increment rate limit for fixed-window and sliding-window types
         // Token-bucket is not yet supported by the rate limit helpers

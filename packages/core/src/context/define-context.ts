@@ -8,7 +8,11 @@ export function defineContext<T extends z.ZodRawShape, TTools extends Record<str
     tools?: TTools;
 }):ContextDefinition<T,TTools> {
 
-      const defaultValues = Boolean(options?.defaultValues) ? schema.partial().parse(options?.defaultValues) : {};
+      let defaultValues = {};
+
+      if(Boolean(options?.defaultValues)){
+        defaultValues = schema.partial().parse(options?.defaultValues);
+      }
       // Validate at runtime
       const  context = contextSchema.parse({
         schema,

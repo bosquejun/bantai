@@ -36,10 +36,11 @@ export async function evaluatePolicy<
         strategy?: PolicyStrategy
     } 
 ): Promise<PolicyResult> {
-    const inputValue = policy.context.schema.parse({
-        ...policy.context.defaultValues,
+    const inputData = {
+        ...(policy.context.defaultValues || {}),
         ...input,
-    })
+    }
+    const inputValue = policy.context.schema.parse(inputData)
 
     const violatedRules:PolicyResult['violatedRules'] = [];
     const strategy = options?.strategy || policy.options?.defaultStrategy || 'preemptive';
@@ -74,9 +75,9 @@ export async function evaluatePolicy<
         
         // For preemptive strategy, trigger hooks immediately
         if (strategy === 'preemptive') {
-            if (result.allowed && rule.hooks?.onAllow) {
+            if (result.allowed && !result.skipped && rule.hooks?.onAllow) {
                 await rule.hooks.onAllow(result, inputValue, ctx);
-            } else if (!result.allowed && rule.hooks?.onDeny) {
+            } else if (!result.allowed && !result.skipped && rule.hooks?.onDeny) {
                 await rule.hooks.onDeny(result, inputValue, ctx);
             }
         }
@@ -102,9 +103,9 @@ export async function evaluatePolicy<
     // For non-preemptive strategies, trigger hooks based on final decision
     if (strategy !== 'preemptive') {
         for (const { rule, result } of evaluatedRules) {
-            if (finalDecision === 'allow' && result.allowed && rule.hooks?.onAllow) {
+            if (finalDecision === 'allow' && result.allowed && !result.skipped && rule.hooks?.onAllow) {
                 await rule.hooks.onAllow(result, inputValue, ctx);
-            } else if (finalDecision === 'deny' && !result.allowed && rule.hooks?.onDeny) {
+            } else if (finalDecision === 'deny' && !result.allowed && !result.skipped && rule.hooks?.onDeny) {
                 await rule.hooks.onDeny(result, inputValue, ctx);
             }
         }
