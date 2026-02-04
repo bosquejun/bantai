@@ -70,7 +70,7 @@ const EvaluationFlow: React.FC = () => {
             <div className="relative border-2 dark:border-white/10 border-black/10 dark:bg-black bg-white p-8 shadow-2xl">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center justify-center w-full gap-3">
-                <Image src="/logo.png" alt="Bantai" width={40} height={40} className='dark:invert' />
+                <Image src="/bantai.svg" alt="Bantai" width={40} height={40} className='dark:invert' />
 
                   <span className="text-[12px] font-black dark:text-white text-black tracking-[0.2em] uppercase">BANTAI</span>
                 </div>
