@@ -1,5 +1,16 @@
 # @bantai-dev/storage-redis
 
+## 0.6.0
+
+### Minor Changes
+
+- Fix core functions and rate limiting extension
+
+### Patch Changes
+
+- Updated dependencies
+  - @bantai-dev/with-storage@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes

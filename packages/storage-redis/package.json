@@ -1,6 +1,6 @@
 {
   "name": "@bantai-dev/storage-redis",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Storage plugin for @bantai-dev/core",
   "type": "module",
   "main": "./dist/index.js",

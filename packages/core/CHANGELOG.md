@@ -1,5 +1,11 @@
 # @bantai-dev/core
 
+## 0.6.0
+
+### Minor Changes
+
+- Fix core functions and rate limiting extension
+
 ## 0.5.0
 
 ### Minor Changes
