@@ -35,6 +35,7 @@ Bantai provides a set of core functions and types for building policy evaluation
 - `RuleResult` - Rule evaluation result
 - `PolicyResult` - Policy evaluation result
 - `ViolatedRule` - Violated rule information
+- `EvaluatedRule` - Evaluated rule information (all rules)
 - `PolicyStrategy` - Evaluation strategy type
 
 ## Complete Example
@@ -85,7 +86,9 @@ const result = await evaluatePolicy(policy, {
 });
 
 console.log(result.decision); // 'allow' or 'deny'
+console.log(result.isAllowed); // true or false
 console.log(result.violatedRules); // Array of violations
+console.log(result.evaluatedRules); // Array of all evaluated rules
 ```
 
 ## Related Documentation

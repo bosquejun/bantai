@@ -9,20 +9,26 @@ Examples of resource management and rate limiting using Bantai.
 
 ## API Rate Limiting
 
-Using the rate limiting extension:
+Using the rate limiting extension with `defineRateLimitRule` and `generateKey`:
+
+The `defineRateLimitRule` function automatically handles rate limit checking and incrementing, making it much simpler than manually implementing rate limiting. The `generateKey` function allows you to dynamically generate rate limit keys from your context input, which is especially useful for per-user or per-endpoint rate limiting.
 
 ```typescript
 import { z } from 'zod';
 import {
   defineContext,
-  defineRule,
   definePolicy,
   evaluatePolicy,
   allow,
-  deny,
 } from '@bantai-dev/core';
-import { withRateLimit, createMemoryStorage, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import {
+  withRateLimit,
+  defineRateLimitRule,
+  createMemoryStorage,
+  rateLimitSchema,
+} from '@bantai-dev/with-rate-limit';
 
+// 1. Define base context
 const apiContext = defineContext(
   z.object({
     userId: z.string(),
@@ -30,46 +36,33 @@ const apiContext = defineContext(
   })
 );
 
+// 2. Extend context with rate limiting
+// generateKey will be used automatically when rateLimit.key is not provided
 const rateLimitedContext = withRateLimit(apiContext, {
   storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'fixed-window',
+      limit: 100,
+      windowMs: '1h',
+    },
+  },
 });
 
-const rateLimitRule = defineRule(
+// 3. Define rate limit rule using defineRateLimitRule
+// This automatically handles rate limit checking and incrementing
+const rateLimitRule = defineRateLimitRule(
   rateLimitedContext,
   'check-rate-limit',
-  async (input, { tools }) => {
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `api:${input.userId}:${input.endpoint}`,
-        type: 'fixed-window',
-        limit: 100,
-        windowMs: '1h',
-      }
-    );
-    
-    if (!result.allowed) {
-      return deny({ reason: result.reason || 'Rate limit exceeded' });
-    }
-    
-    return allow({ reason: `Rate limit OK: ${result.remaining} remaining` });
-  },
-  {
-    onAllow: async (input, { tools }) => {
-      // Increment counter when request is allowed
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `api:${input.userId}:${input.endpoint}`,
-          type: 'fixed-window',
-          limit: 100,
-          windowMs: '1h',
-        }
-      );
-    },
+  async (input) => {
+    // Your business logic here
+    // Rate limit is already checked and will be incremented on allow
+    return allow({ reason: 'Request allowed' });
   }
 );
 
+// 4. Define policy
 const rateLimitPolicy = definePolicy(
   rateLimitedContext,
   'api-rate-limit-policy',
@@ -78,7 +71,54 @@ const rateLimitPolicy = definePolicy(
     defaultStrategy: 'preemptive',
   }
 );
+
+// 5. Evaluate policy
+// Option 1: Use default rate limit config (from defaultValues)
+const result1 = await evaluatePolicy(rateLimitPolicy, {
+  userId: 'user123',
+  endpoint: '/api/search',
+});
+
+// Option 2: Override rate limit config per request
+const result2 = await evaluatePolicy(rateLimitPolicy, {
+  userId: 'user123',
+  endpoint: '/api/search',
+  rateLimit: {
+    type: 'fixed-window',
+    limit: 200, // Higher limit for this specific request
+    windowMs: '1h',
+  },
+});
+
+// Option 3: Override key (generateKey won't be used)
+const result3 = await evaluatePolicy(rateLimitPolicy, {
+  userId: 'user123',
+  endpoint: '/api/search',
+  rateLimit: {
+    key: 'custom:key:override', // Custom key instead of generated one
+    type: 'fixed-window',
+    limit: 100,
+    windowMs: '1h',
+  },
+});
 ```
+
+### How It Works
+
+1. **generateKey Function**: When you provide a `generateKey` function to `withRateLimit`, it will automatically generate rate limit keys from your input. In this example, it creates keys like `api:user123:/api/search`.
+
+2. **defineRateLimitRule**: This helper function automatically:
+   - Checks the rate limit before your rule logic runs
+   - Denies immediately if the rate limit is exceeded
+   - Increments the rate limit counter when your rule allows
+   - Only then executes your custom rule logic
+
+3. **Key Resolution**: The rate limit key is resolved in this order:
+   - If `rateLimit.key` is provided in the input, use it
+   - Otherwise, if `generateKey` is available, use it
+   - Otherwise, fall back to `'unknown-key'`
+
+4. **Config Override**: You can override the rate limit configuration per request, allowing for different limits for different endpoints or users.
 
 ## Related Examples
 

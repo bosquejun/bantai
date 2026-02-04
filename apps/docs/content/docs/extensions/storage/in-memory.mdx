@@ -1,0 +1,391 @@
+---
+title: In-Memory Storage Adapter
+description: Simple in-memory storage adapter for development and testing
+---
+
+# In-Memory Storage Adapter
+
+The `createMemoryStorage` function provides a simple in-memory storage adapter for Bantai. Perfect for development, testing, and prototyping. Data is stored in a `Map` and is not persisted across application restarts.
+
+## Installation
+
+The in-memory storage adapter is available in both storage packages:
+
+
+```package-install
+@bantai-dev/with-storage @bantai-dev/core zod
+```
+
+## Quick Start
+
+```typescript
+import { z } from 'zod';
+import { defineContext, defineRule } from '@bantai-dev/core';
+import { withStorage, createMemoryStorage } from '@bantai-dev/with-storage';
+
+// 1. Define your schema
+const userDataSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  lastLogin: z.number(),
+});
+
+// 2. Create in-memory storage adapter
+const storage = createMemoryStorage(userDataSchema);
+
+// 3. Use with Bantai context
+const context = withStorage(
+  defineContext(z.object({ userId: z.string() })),
+  storage
+);
+
+// 4. Use in rules
+const userRule = defineRule(
+  context,
+  'get-user',
+  async (input, { tools }) => {
+    const user = await tools.storage.get(`user:${input.userId}`);
+    
+    if (!user) {
+      return deny({ reason: 'User not found' });
+    }
+
+    return allow({ reason: `User: ${user.name}` });
+  }
+);
+```
+
+## Features
+
+- **Schema Validation**: Zod schema validation on write operations
+- **Atomic Updates**: Lock-based atomic read-modify-write operations
+- **Simple API**: Easy-to-use interface matching the `StorageAdapter` interface
+- **Zero Dependencies**: No external storage systems required
+- **Fast**: In-memory operations are extremely fast
+
+## Limitations
+
+⚠️ **Important**: This storage adapter is **not suitable for production use**:
+
+- **No Persistence**: Data is lost when the application restarts
+- **Single Process**: Data is not shared across multiple processes or instances
+- **No TTL Expiration**: TTL values are accepted but not automatically enforced (for API compatibility)
+- **Memory Bound**: All data must fit in memory
+
+For production use, consider:
+- **[Redis Storage](/docs/extensions/storage/redis)** - Production-ready distributed storage
+- Custom storage adapter implementing the `StorageAdapter` interface
+
+## API Reference
+
+### `createMemoryStorage`
+
+Creates an in-memory storage adapter that implements the `StorageAdapter` interface.
+
+```typescript
+function createMemoryStorage<T extends z.ZodType>(
+  schema: T
+): StorageAdapter<z.infer<T>>
+```
+
+**Parameters:**
+
+- `schema`: Zod schema for validating stored values
+
+**Returns:** `StorageAdapter<z.infer<T>>`
+
+**StorageAdapter Interface:**
+
+```typescript
+interface StorageAdapter<T> {
+  get(key: string): Promise<T | undefined>;
+  set(key: string, value: T, ttlMs?: number): Promise<void>;
+  delete(key: string): Promise<void>;
+  update?(
+    key: string,
+    updater: (current: T | undefined) => {
+      value: T;
+      ttlMs?: number;
+    } | null
+  ): Promise<T | undefined>;
+}
+```
+
+## Methods
+
+### `get(key)`
+
+Retrieves a value by key. Returns `undefined` if not found.
+
+```typescript
+const user = await storage.get('user:123');
+```
+
+### `set(key, value, ttlMs?)`
+
+Sets a value with optional TTL (time-to-live) in milliseconds. The value is validated against the schema before storage.
+
+**Note**: TTL is accepted for API compatibility but not automatically enforced. You'll need to manually check expiration if needed.
+
+```typescript
+await storage.set('user:123', {
+  userId: '123',
+  name: 'John Doe',
+  lastLogin: Date.now(),
+}, 3600000); // 1 hour TTL (not auto-expired)
+```
+
+### `delete(key)`
+
+Deletes a value by key.
+
+```typescript
+await storage.delete('user:123');
+```
+
+### `update(key, updater)`
+
+Atomically updates a value using a lock mechanism. The updater function receives the current value and returns the new value with optional TTL, or `null` to delete.
+
+```typescript
+const newValue = await storage.update('counter:123', (current) => {
+  const count = current?.count || 0;
+  return {
+    value: { count: count + 1 },
+    ttlMs: 3600000,
+  };
+});
+```
+
+## Examples
+
+### Basic Storage Usage
+
+```typescript
+import { z } from 'zod';
+import { defineContext, defineRule } from '@bantai-dev/core';
+import { withStorage, createMemoryStorage } from '@bantai-dev/with-storage';
+
+const sessionSchema = z.object({
+  userId: z.string(),
+  expiresAt: z.number(),
+});
+
+const storage = createMemoryStorage(sessionSchema);
+
+const context = withStorage(
+  defineContext(z.object({ sessionId: z.string() })),
+  storage
+);
+
+const sessionRule = defineRule(
+  context,
+  'check-session',
+  async (input, { tools }) => {
+    const session = await tools.storage.get(input.sessionId);
+    
+    if (!session) {
+      return deny({ reason: 'Session not found' });
+    }
+
+    // Manual expiration check (TTL not auto-enforced)
+    if (session.expiresAt < Date.now()) {
+      await tools.storage.delete(input.sessionId);
+      return deny({ reason: 'Session expired' });
+    }
+
+    return allow({ reason: 'Session valid' });
+  }
+);
+```
+
+### Atomic Counter Updates
+
+The in-memory storage provides atomic updates using locking:
+
+```typescript
+const counterSchema = z.object({
+  count: z.number().int().min(0),
+});
+
+const storage = createMemoryStorage(counterSchema);
+
+const context = withStorage(
+  defineContext(z.object({ counterKey: z.string() })),
+  storage
+);
+
+const incrementRule = defineRule(
+  context,
+  'increment',
+  async (input, { tools }) => {
+    // Atomic increment - safe for concurrent access
+    const newValue = await tools.storage.update(
+      input.counterKey,
+      (current) => {
+        const count = current?.count || 0;
+        return {
+          value: { count: count + 1 },
+        };
+      }
+    );
+
+    return allow({ reason: `Counter: ${newValue?.count}` });
+  }
+);
+```
+
+### Caching with Manual Expiration
+
+Since TTL is not automatically enforced, you can implement manual expiration:
+
+```typescript
+const cacheSchema = z.object({
+  data: z.string(),
+  cachedAt: z.number(),
+  expiresAt: z.number(),
+});
+
+const storage = createMemoryStorage(cacheSchema);
+
+const context = withStorage(
+  defineContext(z.object({ cacheKey: z.string() })),
+  storage
+);
+
+const cacheRule = defineRule(
+  context,
+  'get-cached',
+  async (input, { tools }) => {
+    const cached = await tools.storage.get(input.cacheKey);
+    
+    if (cached && cached.expiresAt > Date.now()) {
+      return allow({ reason: 'Cache hit' });
+    }
+
+    // Cache expired or not found
+    if (cached) {
+      await tools.storage.delete(input.cacheKey);
+    }
+
+    // Fetch and cache with expiration timestamp
+    const data = await fetchData();
+    const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
+    
+    await tools.storage.set(input.cacheKey, {
+      data,
+      cachedAt: Date.now(),
+      expiresAt,
+    });
+
+    return allow({ reason: 'Data cached' });
+  }
+);
+```
+
+### Integration with Rate Limiting
+
+Perfect for development and testing rate limiting:
+
+```typescript
+import { withRateLimit, rateLimitSchema, createMemoryStorage } from '@bantai-dev/with-rate-limit';
+
+const storage = createMemoryStorage(rateLimitSchema);
+
+const rateLimitedContext = withRateLimit(baseContext, {
+  storage,
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'fixed-window',
+      limit: 100,
+      windowMs: '1h',
+    },
+  },
+});
+```
+
+## How It Works
+
+### Storage Mechanism
+
+- Uses a JavaScript `Map` to store key-value pairs
+- All operations are synchronous (wrapped in Promises for async compatibility)
+- No serialization needed - values are stored as-is
+
+### Locking Mechanism
+
+The `update` method uses a promise-based locking mechanism:
+
+1. **Lock Queue**: Each key has a queue of pending operations
+2. **Sequential Execution**: Operations on the same key execute sequentially
+3. **Automatic Release**: Locks are automatically released after operation completion
+
+This ensures atomic read-modify-write operations even in concurrent scenarios.
+
+### Schema Validation
+
+Values are validated against the provided Zod schema on write operations:
+
+- `set()`: Validates before storing
+- `update()`: Validates the new value before storing
+
+Invalid values will throw a Zod validation error.
+
+## Use Cases
+
+### Development & Testing
+
+- **Local Development**: Quick setup without external dependencies
+- **Unit Tests**: Isolated test storage that resets between tests
+- **Prototyping**: Fast iteration without infrastructure setup
+
+### When to Use
+
+✅ **Good for:**
+- Development and local testing
+- Unit and integration tests
+- Prototyping and demos
+- Single-process applications
+
+❌ **Not suitable for:**
+- Production deployments
+- Multi-process/multi-instance applications
+- Data that needs to persist across restarts
+- High-availability requirements
+
+## Migration to Production Storage
+
+When ready for production, you can easily swap the storage adapter:
+
+```typescript
+// Development
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+const storage = createMemoryStorage(schema);
+
+// Production
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+const storage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  schema
+);
+
+// Same interface - no code changes needed!
+const context = withStorage(baseContext, storage);
+```
+
+## Requirements
+
+- Node.js >= 18
+- TypeScript >= 5.0
+- Zod >= 4.3.5
+- @bantai-dev/with-storage or @bantai-dev/with-rate-limit
+- @bantai-dev/core
+
+## Related Documentation
+
+- **[Storage Extension](/docs/extensions/storage/with-storage)** - Learn about storage adapters
+- **[Redis Storage](/docs/extensions/storage/redis)** - Production-ready Redis storage
+- **[Rate Limiting Extension](/docs/extensions/with-rate-limit)** - Uses in-memory storage for development
+- **[Core Concepts](/docs/concepts)** - Understand contexts, rules, and policies
+

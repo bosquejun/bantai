@@ -122,8 +122,10 @@ When you evaluate a policy, you get a `PolicyResult`:
 const result = await evaluatePolicy(policy, input);
 
 console.log(result.decision); // 'allow' or 'deny'
+console.log(result.isAllowed); // true or false (convenience property)
 console.log(result.reason); // 'policy_enforced' or 'policy_violated'
 console.log(result.violatedRules); // Array of violated rules
+console.log(result.evaluatedRules); // Array of all evaluated rules
 console.log(result.strategy); // 'preemptive' or 'exhaustive'
 ```
 
@@ -137,6 +139,20 @@ result.violatedRules.forEach((violation) => {
   console.log(violation.result.reason); // Why it failed
 });
 ```
+
+### Evaluated Rules
+
+The `evaluatedRules` array contains information about all rules that were evaluated (both passed and failed):
+
+```typescript
+result.evaluatedRules.forEach((evaluated) => {
+  console.log(evaluated.rule.name); // Rule name
+  console.log(evaluated.result.allowed); // Whether the rule allowed or denied
+  console.log(evaluated.result.reason); // Reason for the decision
+});
+```
+
+This is particularly useful when using the `exhaustive` strategy to see all rule evaluations, not just the violations.
 
 ## Best Practices
 

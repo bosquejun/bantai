@@ -304,8 +304,10 @@ Evaluates a policy against a current context.
 ```typescript
 {
   decision: 'allow' | 'deny';
-  reason: 'policy_violated' | 'policy_enforced' | 'policy_not_found' | 'rule_not_found' | null;
+  isAllowed: boolean;
+  reason: 'policy_violated' | 'policy_enforced';
   violatedRules: ViolatedRule[];
+  evaluatedRules: EvaluatedRule[];
   strategy: 'preemptive' | 'exhaustive';
 }
 ```

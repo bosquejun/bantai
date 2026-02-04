@@ -49,7 +49,9 @@ const agePolicy = definePolicy(ageContext, 'age-verification-policy', [ageVerifi
 const result = await evaluatePolicy(agePolicy, { age: 25 });
 
 console.log(result.decision); // 'allow' or 'deny'
+console.log(result.isAllowed); // true or false
 console.log(result.violatedRules); // Array of violations
+console.log(result.evaluatedRules); // Array of all evaluated rules
 ```
 
 ## Packages

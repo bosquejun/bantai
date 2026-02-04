@@ -72,8 +72,10 @@ import { evaluatePolicy } from '@bantai-dev/core';
 const result = await evaluatePolicy(agePolicy, { age: 25 });
 
 console.log(result.decision); // 'allow' or 'deny'
+console.log(result.isAllowed); // true or false
 console.log(result.reason); // 'policy_enforced' or 'policy_violated'
 console.log(result.violatedRules); // Array of violated rules
+console.log(result.evaluatedRules); // Array of all evaluated rules
 ```
 
 ## Complete Example

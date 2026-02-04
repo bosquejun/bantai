@@ -1,5 +1,11 @@
 # @bantai-dev/core
 
+## 0.5.0
+
+### Minor Changes
+
+- Rename with-rate-limit extension
+
 ## 0.4.0
 
 ### Minor Changes

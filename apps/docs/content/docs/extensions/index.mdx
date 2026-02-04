@@ -1,0 +1,167 @@
+---
+title: Extensions
+description: Extend Bantai with additional capabilities like rate limiting and storage
+---
+
+# Extensions
+
+Bantai's extension system allows you to add powerful capabilities to your contexts, such as rate limiting, storage, and more. Extensions seamlessly integrate with Bantai's core functionality while maintaining full type safety.
+
+## What are Extensions?
+
+Extensions are packages that extend Bantai contexts with additional functionality. They work by:
+
+- **Extending Contexts**: Adding new schema fields and tools to your context definitions
+- **Providing Tools**: Making additional utilities available to your rules during evaluation
+- **Maintaining Type Safety**: Preserving full TypeScript type inference throughout
+
+Extensions follow a consistent pattern: they take a base context and return an enhanced context with additional capabilities.
+
+## Available Extensions
+
+### [Rate Limiting](/docs/extensions/with-rate-limit)
+
+Add rate limiting capabilities to your Bantai contexts with support for multiple strategies:
+
+- **Fixed Window**: Simple time-based rate limiting
+- **Sliding Window**: More accurate rate limiting with timestamp tracking
+- **Token Bucket**: Burst handling with token refill
+
+Perfect for API rate limiting, quota management, and request throttling.
+
+```typescript
+import { withRateLimit } from '@bantai-dev/with-rate-limit';
+
+const rateLimitedContext = withRateLimit(baseContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+});
+```
+
+### [Storage](/docs/extensions/with-storage)
+
+Add storage capabilities to your contexts for persistent data access:
+
+- **Storage Adapter Interface**: Unified interface for different storage backends
+- **Type-Safe Storage**: Zod schema validation for stored data
+- **Memory Storage**: Built-in in-memory storage for development
+
+Useful for caching, session management, and persistent rule state.
+
+```typescript
+import { withStorage } from '@bantai-dev/with-storage';
+
+const contextWithStorage = withStorage(baseContext, storageAdapter);
+```
+
+### [Redis Storage](/docs/storage/storage-redis)
+
+Production-ready Redis storage adapter for Bantai:
+
+- **Redis Integration**: Full Redis support for distributed systems
+- **Schema Validation**: Type-safe data storage with Zod schemas
+- **TTL Support**: Automatic expiration for stored values
+
+Ideal for production deployments requiring distributed storage.
+
+```typescript
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+
+const redisStorage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  schema
+);
+```
+
+## How Extensions Work
+
+Extensions follow a simple pattern:
+
+1. **Start with a Base Context**: Define your core context schema
+2. **Apply Extensions**: Use extension functions to enhance the context
+3. **Use Enhanced Features**: Access new tools and fields in your rules
+
+### Example: Combining Extensions
+
+Extensions can be combined to build powerful solutions:
+
+```typescript
+import { defineContext } from '@bantai-dev/core';
+import { withStorage } from '@bantai-dev/with-storage';
+import { withRateLimit } from '@bantai-dev/with-rate-limit';
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+
+// 1. Define base context
+const apiContext = defineContext(
+  z.object({
+    userId: z.string(),
+    endpoint: z.string(),
+  })
+);
+
+// 2. Create storage adapter
+const redisStorage = createRedisStorage(
+  { url: process.env.REDIS_URL },
+  rateLimitSchema
+);
+
+// 3. Apply extensions (order matters - rate limit needs storage)
+const storageContext = withStorage(apiContext, redisStorage);
+const enhancedContext = withRateLimit(storageContext, {
+  storage: redisStorage,
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+});
+
+// 4. Use in rules
+const rule = defineRule(enhancedContext, 'api-rule', async (input, { tools }) => {
+  // Access both storage and rateLimit tools
+  const cached = await tools.storage.get(`cache:${input.userId}`);
+  const rateLimitResult = await tools.rateLimit.checkRateLimit(
+    tools.storage,
+    { key: `api:${input.userId}`, type: 'fixed-window', limit: 100, windowMs: '1h' }
+  );
+  // ...
+});
+```
+
+## Extension Architecture
+
+All extensions share a common architecture:
+
+- **Context Extension**: Extend the context schema with new fields
+- **Tools Integration**: Add tools to the context that rules can access
+- **Type Safety**: Full TypeScript support with proper type inference
+- **Composability**: Extensions can be combined and composed together
+
+## When to Use Extensions
+
+Use extensions when you need:
+
+- **Rate Limiting**: Control request rates, API quotas, or usage limits
+- **Storage**: Cache data, persist state, or access external storage
+- **Custom Tools**: Add domain-specific utilities to your rules
+
+Extensions are optional - Bantai works perfectly fine without them for simple use cases.
+
+## Installation
+
+Each extension is a separate package:
+
+```bash
+# Rate limiting
+npm install @bantai-dev/with-rate-limit @bantai-dev/with-storage
+
+# Storage
+npm install @bantai-dev/with-storage
+
+# Redis storage
+npm install @bantai-dev/storage-redis
+```
+
+## Next Steps
+
+- **[Rate Limiting Extension](/docs/extensions/with-rate-limit)** - Learn about rate limiting
+- **[Storage Extension](/docs/extensions/with-storage)** - Learn about storage adapters
+- **[Redis Storage](/docs/storage/storage-redis)** - Production Redis integration
+- **[Examples](/docs/examples)** - See extensions in action
+

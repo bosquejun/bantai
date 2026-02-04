@@ -159,8 +159,27 @@ Extends a Bantai context with rate limiting capabilities. Adds `rateLimit` schem
 - `options`:
   - `storage?`: A storage adapter implementing `RateLimitStorage` interface
   - `defaultValues?`: Default values for rate limit configuration
+  - `generateKey?`: Optional function to generate rate limit keys dynamically from context input. If provided, this function will be used when `rateLimit.key` is not specified in the input.
 
 **Returns:** Extended context with rate limiting capabilities
+
+**Example with generateKey:**
+
+```typescript
+const rateLimitedContext = withRateLimit(apiContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'fixed-window',
+      limit: 100,
+      windowMs: '1h',
+    },
+  },
+});
+```
+
+When using `defineRateLimitRule`, if `rateLimit.key` is not provided in the input, the `generateKey` function will be used automatically.
 
 ### `rateLimit.checkRateLimit(storage, config, clock?)`
 

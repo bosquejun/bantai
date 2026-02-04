@@ -1,0 +1,9 @@
+{
+    "title": "Storage Extensions",
+    "pages": [
+        "with-storage",
+        "in-memory",
+        "redis"
+    ]
+  }
+  

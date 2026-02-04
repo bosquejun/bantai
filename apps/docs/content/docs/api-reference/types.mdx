@@ -112,8 +112,10 @@ Type representing the result of a policy evaluation.
 ```typescript
 type PolicyResult = {
   decision: 'allow' | 'deny';
-  reason: 'policy_violated' | 'policy_enforced' | 'policy_not_found' | 'rule_not_found' | null;
+  isAllowed: boolean;
+  reason: 'policy_violated' | 'policy_enforced';
   violatedRules: ViolatedRule[];
+  evaluatedRules: EvaluatedRule[];
   strategy: 'preemptive' | 'exhaustive';
 }
 ```
@@ -121,12 +123,12 @@ type PolicyResult = {
 **Properties:**
 
 - `decision`: Final decision (`'allow'` or `'deny'`)
+- `isAllowed`: Boolean convenience property (`true` when `decision === 'allow'`)
 - `reason`: Reason for the decision
   - `'policy_enforced'`: All rules passed
   - `'policy_violated'`: One or more rules failed
-  - `'policy_not_found'`: Policy not found (should not occur)
-  - `'rule_not_found'`: Rule not found (should not occur)
 - `violatedRules`: Array of violated rules
+- `evaluatedRules`: Array of all evaluated rules (both passed and failed)
 - `strategy`: Strategy used for evaluation
 
 ---
@@ -146,6 +148,24 @@ type ViolatedRule = {
 
 - `name`: Name of the violated rule
 - `result`: Rule result that caused the violation
+
+---
+
+## `EvaluatedRule`
+
+Type representing an evaluated rule (both passed and failed).
+
+```typescript
+type EvaluatedRule = {
+  rule: RuleDefinition;
+  result: RuleResult;
+}
+```
+
+**Properties:**
+
+- `rule`: The rule definition that was evaluated
+- `result`: The result of the rule evaluation
 
 ---
 

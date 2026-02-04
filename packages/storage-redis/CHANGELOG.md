@@ -1,5 +1,16 @@
 # @bantai-dev/storage-redis
 
+## 0.5.0
+
+### Minor Changes
+
+- Rename with-rate-limit extension
+
+### Patch Changes
+
+- Updated dependencies
+  - @bantai-dev/with-storage@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes

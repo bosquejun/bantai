@@ -64,7 +64,9 @@ const result = await evaluatePolicy(signupPolicy, {
 });
 
 console.log(result.decision); // 'allow'
-console.log(result.violatedRules); // []`
+console.log(result.isAllowed); // true
+console.log(result.violatedRules); // []
+console.log(result.evaluatedRules); // Array of all evaluated rules`
   }
 ];
 

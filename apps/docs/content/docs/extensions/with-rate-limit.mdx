@@ -19,8 +19,13 @@ The `@bantai-dev/with-rate-limit` package adds rate limiting capabilities to you
 
 ```typescript
 import { z } from 'zod';
-import { defineContext, defineRule, definePolicy, evaluatePolicy, allow, deny } from '@bantai-dev/core';
-import { withRateLimit, createMemoryStorage, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { defineContext, definePolicy, evaluatePolicy, allow } from '@bantai-dev/core';
+import {
+  withRateLimit,
+  defineRateLimitRule,
+  createMemoryStorage,
+  rateLimitSchema,
+} from '@bantai-dev/with-rate-limit';
 
 // 1. Define your base context
 const apiContext = defineContext(
@@ -31,11 +36,12 @@ const apiContext = defineContext(
 );
 
 // 2. Extend context with rate limiting
+// generateKey will automatically create keys from your input
 const rateLimitedContext = withRateLimit(apiContext, {
   storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
   defaultValues: {
     rateLimit: {
-      key: 'api:${userId}:${endpoint}',
       type: 'fixed-window',
       limit: 100,
       windowMs: '1h',
@@ -43,40 +49,15 @@ const rateLimitedContext = withRateLimit(apiContext, {
   },
 });
 
-// 3. Define a rate limiting rule
-const rateLimitRule = defineRule(
+// 3. Define a rate limiting rule using defineRateLimitRule
+// This automatically handles rate limit checking and incrementing
+const rateLimitRule = defineRateLimitRule(
   rateLimitedContext,
   'check-rate-limit',
-  async (input, { tools }) => {
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `api:${input.userId}:${input.endpoint}`,
-        type: 'fixed-window',
-        limit: 100,
-        windowMs: '1h',
-      }
-    );
-
-    if (!result.allowed) {
-      return deny({ reason: result.reason || 'Rate limit exceeded' });
-    }
-
-    return allow({ reason: `Rate limit OK: ${result.remaining} remaining` });
-  },
-  {
-    onAllow: async (input, { tools }) => {
-      // Increment counter when request is allowed
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `api:${input.userId}:${input.endpoint}`,
-          type: 'fixed-window',
-          limit: 100,
-          windowMs: '1h',
-        }
-      );
-    },
+  async (input) => {
+    // Your business logic here
+    // Rate limit is already checked and will be incremented on allow
+    return allow({ reason: 'Request allowed' });
   }
 );
 
@@ -90,7 +71,8 @@ const policy = definePolicy(
   }
 );
 
-// 5. Create Bantai instance and evaluate
+// 5. Evaluate policy
+// The generateKey function will create the key automatically
 const result = await evaluatePolicy(policy, {
   userId: 'user123',
   endpoint: '/api/search',
@@ -158,6 +140,7 @@ function withRateLimit<
   options?: {
     defaultValues?: Partial<z.infer<typeof rateLimitSchema['shape']['rateLimit']>>;
     storage?: RateLimitStorage;
+    generateKey?: (input: ExtractContextShape<TContext>) => string;
   }
 ): ContextDefinition<...>
 ```
@@ -168,8 +151,91 @@ function withRateLimit<
 - `options?`: Optional configuration
   - `storage?`: A storage adapter implementing `RateLimitStorage` interface
   - `defaultValues?`: Default values for rate limit configuration
+  - `generateKey?`: Optional function to generate rate limit keys dynamically from context input. If provided, this function will be used when `rateLimit.key` is not specified in the input.
 
 **Returns:** Extended context with rate limiting capabilities
+
+**Example with generateKey:**
+
+```typescript
+const rateLimitedContext = withRateLimit(apiContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'fixed-window',
+      limit: 100,
+      windowMs: '1h',
+    },
+  },
+});
+```
+
+When using `defineRateLimitRule`, if `rateLimit.key` is not provided in the input, the `generateKey` function will be used automatically.
+
+### `defineRateLimitRule`
+
+A helper function that automatically handles rate limit checking and incrementing. This simplifies rule creation by handling the rate limit logic for you.
+
+```typescript
+function defineRateLimitRule<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+  TName extends string = string
+>(
+  context: TContext,
+  name: TName,
+  evaluate: RuleEvaluateFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>,
+  options?: {
+    onAllow?: RuleHookFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>;
+    onDeny?: RuleHookFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>;
+  }
+): RuleDefinition<TContext, TName>
+```
+
+**Parameters:**
+
+- `context`: A context extended with rate limiting capabilities via `withRateLimit`
+- `name`: Unique name for the rule
+- `evaluate`: Your rule evaluation function (rate limit is checked before this runs)
+- `options?`: Optional hooks
+  - `onAllow?`: Hook called after rate limit is incremented (if your rule allows)
+  - `onDeny?`: Hook called if your rule denies
+
+**Returns:** `RuleDefinition<TContext, TName>`
+
+**How it works:**
+
+1. Checks the rate limit before evaluating your rule
+2. If rate limit is exceeded, returns `deny` immediately
+3. If rate limit passes, evaluates your rule
+4. On allow, automatically increments the rate limit counter
+5. Calls your optional hooks
+
+**Key resolution order:**
+
+1. If `rateLimit.key` is provided in the input, use it
+2. Otherwise, if `generateKey` function is available, use it
+3. Otherwise, fall back to `'unknown-key'`
+
+**Example:**
+
+```typescript
+const rateLimitRule = defineRateLimitRule(
+  rateLimitedContext,
+  'api-rule',
+  async (input) => {
+    // Your business logic here
+    // Rate limit already checked and will be incremented on allow
+    return allow({ reason: 'Request processed' });
+  },
+  {
+    onAllow: async (input) => {
+      // Optional: Additional logic after rate limit increment
+      console.log(`Request allowed for ${input.userId}`);
+    },
+  }
+);
+```
 
 ### `checkRateLimit`
 
@@ -266,40 +332,36 @@ const rateLimitedContext = withRateLimit(apiContext, {
 
 ### Per-User Rate Limiting
 
-```typescript
-const userRateLimitRule = defineRule(
-  rateLimitedContext,
-  'user-rate-limit',
-  async (input, { tools }) => {
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `user:${input.userId}`,
-        type: 'fixed-window',
-        limit: 1000,
-        windowMs: '24h',
-      }
-    );
+Using `defineRateLimitRule` with `generateKey`:
 
-    return result.allowed ? allow() : deny({ reason: result.reason });
-  },
-  {
-    onAllow: async (input, { tools }) => {
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `user:${input.userId}`,
-          type: 'fixed-window',
-          limit: 1000,
-          windowMs: '24h',
-        }
-      );
+```typescript
+// Extend context with per-user rate limiting
+const userRateLimitedContext = withRateLimit(userContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `user:${input.userId}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'fixed-window',
+      limit: 1000,
+      windowMs: '24h',
     },
+  },
+});
+
+// Define rule - rate limit checking/incrementing is automatic
+const userRateLimitRule = defineRateLimitRule(
+  userRateLimitedContext,
+  'user-rate-limit',
+  async (input) => {
+    // Your business logic
+    return allow({ reason: 'User request allowed' });
   }
 );
 ```
 
 ### Endpoint-Specific Rate Limits
+
+Using `generateKey` for endpoint-specific rate limiting:
 
 ```typescript
 const endpointLimits = {
@@ -308,43 +370,45 @@ const endpointLimits = {
   '/api/search': { limit: 100, windowMs: '1m' },
 };
 
-const endpointRateLimitRule = defineRule(
-  rateLimitedContext,
-  'endpoint-rate-limit',
-  async (input, { tools }) => {
-    const config = endpointLimits[input.endpoint] || { limit: 50, windowMs: '1h' };
-    
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `endpoint:${input.endpoint}:${input.userId}`,
-        type: 'sliding-window',
-        limit: config.limit,
-        windowMs: config.windowMs,
-      }
-    );
-
-    return result.allowed ? allow() : deny({ reason: result.reason });
-  },
-  {
-    onAllow: async (input, { tools }) => {
-      const config = endpointLimits[input.endpoint] || { limit: 50, windowMs: '1h' };
-      
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `endpoint:${input.endpoint}:${input.userId}`,
-          type: 'sliding-window',
-          limit: config.limit,
-          windowMs: config.windowMs,
-        }
-      );
+// Extend context with endpoint-specific key generation
+const endpointRateLimitedContext = withRateLimit(apiContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `endpoint:${input.endpoint}:${input.userId}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'sliding-window',
+      limit: 50,
+      windowMs: '1h',
     },
+  },
+});
+
+// Define rule - override config per request if needed
+const endpointRateLimitRule = defineRateLimitRule(
+  endpointRateLimitedContext,
+  'endpoint-rate-limit',
+  async (input) => {
+    // Your business logic
+    return allow({ reason: 'Endpoint request allowed' });
   }
 );
+
+// Evaluate with endpoint-specific limits
+const result = await evaluatePolicy(endpointPolicy, {
+  userId: 'user123',
+  endpoint: '/api/auth/login',
+  rateLimit: {
+    // Override default config for this endpoint
+    type: 'sliding-window',
+    limit: endpointLimits['/api/auth/login'].limit,
+    windowMs: endpointLimits['/api/auth/login'].windowMs,
+  },
+});
 ```
 
 ### Tier-Based Rate Limiting
+
+Using `generateKey` for tier-based rate limiting:
 
 ```typescript
 const tierLimits = {
@@ -353,40 +417,40 @@ const tierLimits = {
   enterprise: { limit: 10000, windowMs: '1h' },
 };
 
-const tierRateLimitRule = defineRule(
-  rateLimitedContext,
-  'tier-rate-limit',
-  async (input, { tools }) => {
-    const config = tierLimits[input.userTier];
-    
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `tier:${input.userTier}:${input.userId}`,
-        type: 'token-bucket',
-        capacity: config.limit,
-        refillRate: `${config.limit}/h`,
-      }
-    );
-
-    return result.allowed ? allow() : deny({ reason: result.reason });
-  },
-  {
-    onAllow: async (input, { tools }) => {
-      const config = tierLimits[input.userTier];
-      
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `tier:${input.userTier}:${input.userId}`,
-          type: 'token-bucket',
-          capacity: config.limit,
-          refillRate: `${config.limit}/h`,
-        }
-      );
+// Extend context with tier-based key generation
+const tierRateLimitedContext = withRateLimit(tierContext, {
+  storage: createMemoryStorage(rateLimitSchema),
+  generateKey: (input) => `tier:${input.userTier}:${input.userId}`,
+  defaultValues: {
+    rateLimit: {
+      type: 'token-bucket',
+      capacity: 100,
+      refillRate: '100/h',
     },
+  },
+});
+
+// Define rule
+const tierRateLimitRule = defineRateLimitRule(
+  tierRateLimitedContext,
+  'tier-rate-limit',
+  async (input) => {
+    // Your business logic
+    return allow({ reason: 'Tier request allowed' });
   }
 );
+
+// Evaluate with tier-specific limits
+const result = await evaluatePolicy(tierPolicy, {
+  userId: 'user123',
+  userTier: 'premium',
+  rateLimit: {
+    // Override with tier-specific config
+    type: 'token-bucket',
+    capacity: tierLimits.premium.limit,
+    refillRate: `${tierLimits.premium.limit}/h`,
+  },
+});
 ```
 
 ## Type Safety
