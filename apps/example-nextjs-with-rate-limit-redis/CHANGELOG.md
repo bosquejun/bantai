@@ -1,5 +1,14 @@
 # example-nextjs-with-rate-limit-redis
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @bantai-dev/core@1.1.0
+  - @bantai-dev/storage-redis@1.1.0
+  - @bantai-dev/with-rate-limit@1.1.0
+
 ## 0.1.2
 
 ### Patch Changes
