@@ -1,6 +1,6 @@
 # @bantai-dev/with-rate-limit
 
-> Rate limiting plugin for @bantai-dev/core
+> Rate limiting extension for @bantai-dev/core
 
 Add rate limiting capabilities to your Bantai contexts with support for multiple rate limiting strategies including fixed-window, sliding-window, and token-bucket algorithms.
 
@@ -212,7 +212,7 @@ Creates an in-memory storage adapter for development and testing. Not suitable f
 
 ## Storage Integration
 
-The rate limiting plugin requires a storage adapter. You can use:
+The rate limiting extension requires a storage adapter. You can use:
 
 - **Memory storage** (development/testing): `createMemoryStorage` from this package
 - **Redis storage** (production): `createRedisStorage` from `@bantai-dev/storage-redis`

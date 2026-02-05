@@ -65,7 +65,7 @@ console.log(result.evaluatedRules); // Array of all evaluated rules
 This monorepo contains the following packages:
 
 - **[@bantai-dev/core](./packages/core/)** - Core policy evaluation library
-- **[@bantai-dev/with-rate-limit](./packages/with-rate-limit/)** - Rate limiting plugin for Bantai
+- **[@bantai-dev/with-rate-limit](./packages/with-rate-limit/)** - Rate limiting extension for Bantai
 - **[@bantai-dev/with-storage](./packages/with-storage/)** - Storage plugin for Bantai
 - **[@bantai-dev/storage-redis](./packages/storage-redis/)** - Redis storage adapter for Bantai
 
@@ -82,7 +82,7 @@ For detailed documentation, API reference, and examples, visit:
 bantai-dev/
 ├── packages/
 │   ├── core/              # Main policy evaluation library
-│   ├── with-rate-limit/   # Rate limiting plugin
+│   ├── with-rate-limit/   # Rate limiting extension
 │   ├── with-storage/      # Storage plugin
 │   ├── storage-redis/     # Redis storage adapter
 ├── apps/
