@@ -11,6 +11,11 @@ const storageSchema = z.discriminatedUnion('type', [
     type: z.literal('sliding-window'),
     timestamps: z.array(z.number().int().min(0)),
   }),
+  z.object({
+    type: z.literal('token-bucket'),
+    remainingTokens: z.number().int().min(0),
+    lastRefillAt: z.number().int().min(0),
+  }),
 ]);
 
 export type RateLimitStoreData = z.infer<typeof storageSchema>;

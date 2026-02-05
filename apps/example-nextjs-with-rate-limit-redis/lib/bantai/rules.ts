@@ -9,7 +9,7 @@ export const defaultLimitRule = defineRateLimitRule(context, 'default-limit', as
 }, {
 config:{
     limit: 50,
-    windowMs: '1m',
+    period: '1m',
     type: 'sliding-window',
 }
 });
@@ -22,7 +22,7 @@ export const mutationLimitRule = defineRateLimitRule(context, 'mutation-limit', 
 }, {
 config:{
     limit: 5,
-    windowMs: '1m',
+    period: '1m',
     type: 'sliding-window',
 }
 });
@@ -36,7 +36,21 @@ export const signupLimitRule = defineRateLimitRule(context, 'signup-limit', asyn
 }, {
 config:{
     limit: 1,
-    windowMs: '1h',
+    period: '1h',
     type: 'fixed-window',
 }
+});
+
+
+export const aiGenerateLimitRule = defineRateLimitRule(context, 'ai-generate-limit', async (input) => {
+    if(input.endpoint !== '/api/generate'){
+        return skip();
+    }
+    return allow();
+}, {
+    config: {
+        type:'token-bucket',
+        limit:1_000,
+        period: '5m',
+    }
 });

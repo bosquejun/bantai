@@ -1,18 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { z } from 'zod';
 import { StorageAdapter } from '../storage.js';
 import {
-    checkRateLimit,
-    createRateLimitStorage,
-    fixedWindowConfigSchema,
-    incrementRateLimit,
-    rateLimitCheckResultSchema,
-    rateLimitConfigSchema,
-    rateLimitStoreData,
-    slidingWindowConfigSchema,
-    slidingWindowStoreData,
-    type FixedWindowConfig,
-    type SlidingWindowConfig
+  checkRateLimit,
+  incrementRateLimit,
+  rateLimitCheckResultSchema,
+  rateLimitConfigSchema,
+  rateLimitStoreData,
+  slidingWindowStoreData,
+  type FixedWindowConfig,
+  type SlidingWindowConfig
 } from './rate-limit-helpers.js';
 import { type RateLimitStorage, type RateLimitStoreData } from './rate-limit.js';
 
@@ -51,103 +47,6 @@ function createMockStorage<T>(): StorageAdapter<T> {
   };
 }
 
-describe('createRateLimitStorage', () => {
-  it('should validate values on get', async () => {
-    const mockStorage = createMockStorage<any>();
-    const schema = z.object({ count: z.number() });
-    const validatedStorage = createRateLimitStorage(mockStorage, schema);
-
-    // Set invalid data directly in mock
-    await mockStorage.set('key1', { count: 5 });
-
-    // Get should validate and return valid data
-    const result = await validatedStorage.get('key1');
-    expect(result).toEqual({ count: 5 });
-
-    // Set invalid data
-    await mockStorage.set('key2', { invalid: 'data' });
-
-    // Get should throw validation error
-    await expect(validatedStorage.get('key2')).rejects.toThrow();
-  });
-
-  it('should validate values on set', async () => {
-    const mockStorage = createMockStorage<any>();
-    const schema = z.object({ count: z.number() });
-    const validatedStorage = createRateLimitStorage(mockStorage, schema);
-
-    // Valid data should pass
-    await validatedStorage.set('key1', { count: 10 });
-    expect(await mockStorage.get('key1')).toEqual({ count: 10 });
-
-    // Invalid data should throw
-    await expect(validatedStorage.set('key2', { invalid: 'data' } as any)).rejects.toThrow();
-  });
-
-  it('should validate values on update with update method', async () => {
-    const mockStorage = createMockStorage<any>();
-    const schema = z.object({ count: z.number() });
-    const validatedStorage = createRateLimitStorage(mockStorage, schema);
-
-    // Initial value
-    await validatedStorage.set('key1', { count: 5 });
-
-    // Update with valid data
-    const result = await validatedStorage.update?.('key1', (current) => {
-      return { value: { count: (current?.count || 0) + 1 }, ttlMs: 1000 };
-    });
-
-    expect(result).toEqual({ count: 6 });
-    expect(await mockStorage.get('key1')).toEqual({ count: 6 });
-
-    // Update with invalid data should throw
-    await expect(
-      validatedStorage.update?.('key1', () => {
-        return { value: { invalid: 'data' } as any, ttlMs: 1000 };
-      })
-    ).rejects.toThrow();
-  });
-
-  it('should handle update when storage has no update method', async () => {
-    const mockStorage = createMockStorage<any>();
-    // Remove update method
-    delete (mockStorage as any).update;
-    const schema = z.object({ count: z.number() });
-    const validatedStorage = createRateLimitStorage(mockStorage, schema);
-
-    // Initial value
-    await validatedStorage.set('key1', { count: 5 });
-
-    // Update should use fallback (read, update, write)
-    const result = await validatedStorage.update?.('key1', (current) => {
-      return { value: { count: (current?.count || 0) + 1 }, ttlMs: 1000 };
-    });
-
-    expect(result).toEqual({ count: 6 });
-    expect(await mockStorage.get('key1')).toEqual({ count: 6 });
-  });
-
-  it('should return undefined when getting non-existent key', async () => {
-    const mockStorage = createMockStorage<any>();
-    const schema = z.object({ count: z.number() });
-    const validatedStorage = createRateLimitStorage(mockStorage, schema);
-
-    const result = await validatedStorage.get('non-existent');
-    expect(result).toBeUndefined();
-  });
-
-  it('should handle delete operation', async () => {
-    const mockStorage = createMockStorage<any>();
-    const schema = z.object({ count: z.number() });
-    const validatedStorage = createRateLimitStorage(mockStorage, schema);
-
-    await validatedStorage.set('key1', { count: 5 });
-    await validatedStorage.delete('key1');
-
-    const result = await validatedStorage.get('key1');
-    expect(result).toBeUndefined();
-  });
-});
 
 describe('checkRateLimit - fixed-window', () => {
   let storage: RateLimitStorage;
@@ -165,7 +64,7 @@ describe('checkRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -181,7 +80,7 @@ describe('checkRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 5,
-      windowMs: '1h',
+      period: '1h',
     };
 
     // Set up storage with count at limit
@@ -205,7 +104,7 @@ describe('checkRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 3,
-      windowMs: '1h',
+      period: '1h',
     };
 
     // Set up storage with count over limit
@@ -228,7 +127,7 @@ describe('checkRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     // Set count in previous window
@@ -250,7 +149,7 @@ describe('checkRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '5m',
+      period: '5m',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -274,7 +173,7 @@ describe('checkRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -289,7 +188,7 @@ describe('checkRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 3,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const windowMs = 3600000; // 1 hour
@@ -316,7 +215,7 @@ describe('checkRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 5,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const windowMs = 3600000; // 1 hour
@@ -344,7 +243,7 @@ describe('checkRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 2,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const windowMs = 3600000; // 1 hour
@@ -366,7 +265,7 @@ describe('checkRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 5,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -391,7 +290,7 @@ describe('incrementRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     await incrementRateLimit(storage, config, clock);
@@ -412,7 +311,7 @@ describe('incrementRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const windowMs = 3600000;
@@ -436,7 +335,7 @@ describe('incrementRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     await incrementRateLimit(storage, config, clock);
@@ -461,7 +360,7 @@ describe('incrementRateLimit - fixed-window', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     await incrementRateLimit(mockStorage, config, clock);
@@ -494,7 +393,7 @@ describe('incrementRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     await incrementRateLimit(storage, config, clock);
@@ -512,7 +411,7 @@ describe('incrementRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const existingTimestamps = [currentTime - 1000, currentTime - 2000];
@@ -535,7 +434,7 @@ describe('incrementRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const windowMs = 3600000;
@@ -567,7 +466,7 @@ describe('incrementRateLimit - sliding-window', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     await incrementRateLimit(mockStorage, config, clock);
@@ -597,7 +496,7 @@ describe('rate limit integration', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 3,
-      windowMs: '1h',
+      period: '1h',
     };
 
     // First check - should allow
@@ -635,7 +534,7 @@ describe('rate limit integration', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 3,
-      windowMs: '1h',
+      period: '1h',
     };
 
     // First check - should allow
@@ -681,19 +580,19 @@ describe('schema validation', () => {
       type: 'fixed-window' as const,
       key: 'test',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
-    expect(() => fixedWindowConfigSchema.parse(validConfig)).not.toThrow();
+    expect(() => rateLimitConfigSchema.parse(validConfig)).not.toThrow();
 
     const invalidConfig = {
       type: 'fixed-window' as const,
       key: 'test',
       limit: -1, // Invalid: negative limit
-      windowMs: '1h',
+      period: '1h',
     };
 
-    expect(() => fixedWindowConfigSchema.parse(invalidConfig)).toThrow();
+    expect(() => rateLimitConfigSchema.parse(invalidConfig)).toThrow();
   });
 
   it('should validate sliding window config schema', () => {
@@ -701,10 +600,10 @@ describe('schema validation', () => {
       type: 'sliding-window' as const,
       key: 'test',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
-    expect(() => slidingWindowConfigSchema.parse(validConfig)).not.toThrow();
+    expect(() => rateLimitConfigSchema.parse(validConfig)).not.toThrow();
   });
 
   it('should validate rate limit config discriminated union', () => {
@@ -712,14 +611,14 @@ describe('schema validation', () => {
       type: 'fixed-window' as const,
       key: 'test',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const slidingConfig = {
       type: 'sliding-window' as const,
       key: 'test',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     expect(() => rateLimitConfigSchema.parse(fixedConfig)).not.toThrow();
@@ -729,7 +628,7 @@ describe('schema validation', () => {
       type: 'invalid-type' as any,
       key: 'test',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     expect(() => rateLimitConfigSchema.parse(invalidConfig)).toThrow();
@@ -765,11 +664,11 @@ describe('schema validation', () => {
       timestamps: [1000, 2000, 3000],
     };
 
-    expect(() => rateLimitStoreData.parse({ count: 5 })).not.toThrow();
-    expect(() => slidingWindowStoreData.parse({ timestamps: [1000] })).not.toThrow();
+    expect(() => rateLimitStoreData.parse({ type: 'fixed-window', count: 5 })).not.toThrow();
+    expect(() => slidingWindowStoreData.parse({ type: 'sliding-window', timestamps: [1000] })).not.toThrow();
 
-    const invalidFixedData = { count: -1 };
-    const invalidSlidingData = { timestamps: [-1] };
+    const invalidFixedData = { type: 'fixed-window' as const, count: -1 };
+    const invalidSlidingData = { type: 'sliding-window' as const, timestamps: [-1] };
 
     expect(() => rateLimitStoreData.parse(invalidFixedData)).toThrow();
     expect(() => slidingWindowStoreData.parse(invalidSlidingData)).toThrow();
@@ -792,7 +691,7 @@ describe('edge cases', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 0,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -805,7 +704,7 @@ describe('edge cases', () => {
       type: 'sliding-window',
       key: 'test-key',
       limit: 0,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -818,7 +717,7 @@ describe('edge cases', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 1000000,
-      windowMs: '1h',
+      period: '1h',
     };
 
     const result = await checkRateLimit(storage, config, clock);
@@ -828,10 +727,10 @@ describe('edge cases', () => {
 
   it('should handle different time window formats', async () => {
     const configs: FixedWindowConfig[] = [
-      { type: 'fixed-window', key: 'test1', limit: 10, windowMs: '1s' },
-      { type: 'fixed-window', key: 'test2', limit: 10, windowMs: '1m' },
-      { type: 'fixed-window', key: 'test3', limit: 10, windowMs: '1h' },
-      { type: 'fixed-window', key: 'test4', limit: 10, windowMs: '1d' },
+      { type: 'fixed-window', key: 'test1', limit: 10, period: '1s' },
+      { type: 'fixed-window', key: 'test2', limit: 10, period: '1m' },
+      { type: 'fixed-window', key: 'test3', limit: 10, period: '1h' },
+      { type: 'fixed-window', key: 'test4', limit: 10, period: '1d' },
     ];
 
     for (const config of configs) {
@@ -845,7 +744,7 @@ describe('edge cases', () => {
       type: 'fixed-window',
       key: 'test-key',
       limit: 10,
-      windowMs: '1h',
+      period: '1h',
     };
 
     // Don't provide clock, should use Date.now

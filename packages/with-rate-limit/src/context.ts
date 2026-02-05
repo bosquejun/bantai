@@ -13,18 +13,11 @@ export const windowMsSchema = z.string().refine((value) => {
 export const rateLimitSchema = z.object({
     rateLimit: z.object({
         key: z.string().optional(),
-    }).and(z.discriminatedUnion('type', [
-        z.object({
-          type: z.literal('token-bucket'),
-          capacity: z.number().int().min(0),
-          refillRate: windowMsSchema,
-        }),
-        z.object({
-          type: z.enum(['fixed-window', 'sliding-window']),
-          limit: z.number().int().min(0),
-          windowMs: windowMsSchema
-        })
-      ]))
+        type: z.enum(['fixed-window', 'sliding-window', 'token-bucket']),
+        limit: z.number().int().min(0).optional(),
+        period: windowMsSchema.optional(),
+        cost: z.number().int().min(1).optional(),
+    })
 });
 
 

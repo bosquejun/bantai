@@ -2,6 +2,7 @@ import { ContextDefinition, ExtractContextShape, ExtractContextTools, defineRule
 import { z } from "zod";
 import { RateLimitShape, rateLimitSchema } from "./context.js";
 import { RateLimitCheckResult } from "./index.js";
+import { type RateLimitConfig } from "./tools/rate-limit-helpers.js";
 import { RateLimitStorage, rateLimit } from "./tools/rate-limit.js";
 
 /**
@@ -103,31 +104,22 @@ if(!context.tools.rateLimit || !context.tools.storage) {
       const typedInput = input as ExtractRateLimitInput<TContext>;
 
 
-      const key = `${name}:${typedInput?.rateLimit?.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`}`;
+      const key = `rules:${name}:${typedInput?.rateLimit?.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`}`;
       const rateLimitConfig ={
         ...typedInput.rateLimit,
-        ...options.config
-      }  as z.infer<typeof rateLimitSchema>['rateLimit'];
+        ...options.config,
+        key,
+      }  as RateLimitConfig
 
-      // Only check rate limit for fixed-window and sliding-window types
-      // Token-bucket is not yet supported by the rate limit helpers
+      // Check rate limit for all supported types (fixed-window, sliding-window, token-bucket)
+      let rateLimitResult = await tools.rateLimit.checkRateLimit(
+        tools.storage,
+        rateLimitConfig
+      );
 
-      let rateLimitResult: RateLimitCheckResult | undefined;
-
-      if (rateLimitConfig.type === 'fixed-window' || rateLimitConfig.type === 'sliding-window') {
-        // Check rate limit first
-        rateLimitResult = await tools.rateLimit.checkRateLimit(
-          tools.storage,
-          {
-            ...rateLimitConfig,
-            key
-          }
-        );
-
-        // If rate limit is exceeded, deny immediately
-        if (!rateLimitResult.allowed) {
-          return deny({ reason: rateLimitResult.reason || 'Rate limit exceeded' });
-        }
+      // If rate limit is exceeded, deny immediately
+      if (!rateLimitResult.allowed) {
+        return deny({ reason: rateLimitResult.reason || 'Rate limit exceeded' });
       }
 
       // Rate limit passed (or not applicable), evaluate the user's rule
@@ -143,26 +135,19 @@ if(!context.tools.rateLimit || !context.tools.storage) {
 
         const typedInput = input as ExtractRateLimitInput<TContext>;
 
-        const key = `${name}:${typedInput?.rateLimit?.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`}`;
+        const key = `rules:${name}:${typedInput?.rateLimit?.key || tools.rateLimit.generateKey?.(input as unknown as ExtractContextShape<TContext>) || `unknown-key`}`;
 
         const rateLimitConfig ={
           ...typedInput.rateLimit,
-          ...options.config
-        }  as z.infer<typeof rateLimitSchema>['rateLimit'];
+          ...options.config,
+          key
+        }  as RateLimitConfig;
 
-        // Only increment rate limit for fixed-window and sliding-window types
-        // Token-bucket is not yet supported by the rate limit helpers
-        if (rateLimitConfig.type === 'fixed-window' || rateLimitConfig.type === 'sliding-window') {
-          // Increment rate limit counter when rule allows
-          await tools.rateLimit.incrementRateLimit(
-            tools.storage,
-            {
-                ...rateLimitConfig,
-                key
-            }
-          );
-        }
-
+       // Increment rate limit counter when rule allows
+       await tools.rateLimit.incrementRateLimit(
+        tools.storage,
+        rateLimitConfig
+      );
         // Call user's onAllow hook if provided
         if (options?.onAllow) {
           await options.onAllow(result, typedInput as z.infer<z.ZodObject<ExtractContextShape<TContext>>>, ctx);

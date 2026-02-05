@@ -131,10 +131,15 @@ Token bucket rate limiting uses a bucket that refills at a constant rate. Reques
 {
   type: 'token-bucket',
   key: 'user:123',
-  capacity: 100,
-  refillRate: '10/s', // 10 tokens per second
+  capacity: 10000,
+  refillPeriod: '1d', // Refills to full capacity (10k tokens) over 1 day
+  tokenCost: 1, // Optional: tokens consumed per request (default: 1)
 }
 ```
+
+**Note**: The `refillPeriod` is a time period (e.g. `"1d"`, `"1h"`, `"30m"`) representing the time to refill from empty to full capacity. The refill rate is automatically calculated as `capacity / period`. For example, `capacity: 10_000` and `refillPeriod: '1d'` means the bucket can hold 10,000 tokens and refills at a rate of 10,000 tokens per day.
+
+**Token Cost**: The `tokenCost` parameter (optional, default: 1) specifies how many tokens each request consumes. This allows you to implement variable-cost rate limiting where different operations consume different amounts of tokens. For example, a simple API call might cost 1 token, while a complex operation might cost 5 tokens.
 
 ## API Reference
 
@@ -343,7 +348,7 @@ const tierRateLimitRule = defineRule(
         key: `tier:${input.userTier}:${input.userId}`,
         type: 'token-bucket',
         capacity: config.limit,
-        refillRate: `${config.limit}/h`,
+        refillPeriod: '1h', // Refills to full capacity over 1 hour
       }
     );
 
@@ -359,7 +364,7 @@ const tierRateLimitRule = defineRule(
           key: `tier:${input.userTier}:${input.userId}`,
           type: 'token-bucket',
           capacity: config.limit,
-          refillRate: `${config.limit}/h`,
+          refillPeriod: '1h', // Refills to full capacity over 1 hour
         }
       );
     },

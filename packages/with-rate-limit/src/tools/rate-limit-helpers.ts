@@ -1,113 +1,48 @@
 import ms from "ms";
 import { z } from "zod";
-import { StorageAdapter } from "../storage.js";
-import { RateLimitStorage, RateLimitStoreData } from "./rate-limit.js";
+import { RateLimitStorage } from "./rate-limit.js";
 
-/**
- * Generic factory function to create a rate limit storage adapter with validation.
- * This function wraps any storage adapter with validation using the provided schema.
- * 
- * Users can provide their own storage implementation (Redis, database, etc.) and wrap it
- * with this function to add schema validation.
- * 
- * @param storage - Any storage adapter implementation (memory, Redis, database, etc.)
- * @param schema - Zod schema for validating storage data (union type for rate limit storage)
- * @returns A validated storage adapter that can be used with both fixed-window and sliding-window rate limiting
- */
-export function createRateLimitStorage<T extends z.ZodTypeAny>(
-  storage: StorageAdapter<z.infer<T>>,
-  schema: T
-): StorageAdapter<z.infer<T>> {
-  return {
-    async get(key) {
-      const value = await storage.get(key);
-      if (value !== undefined) {
-        // Validate the value when reading
-        return schema.parse(value);
-      }
-      return value;
-    },
-
-    async set(key, value, ttlMs) {
-      // Validate the value before writing
-      const validatedValue = schema.parse(value);
-      await storage.set(key, validatedValue, ttlMs);
-    },
-
-    async delete(key) {
-      await storage.delete(key);
-    },
-
-    async update(key, updater) {
-      if (storage.update) {
-        return storage.update(key, (current) => {
-          // Validate current value if it exists
-          const validatedCurrent = current !== undefined ? schema.parse(current) : undefined;
-          const res = updater(validatedCurrent);
-          if (!res) return null;
-          // Validate the new value
-          const validatedValue = schema.parse(res.value);
-          return {
-            value: validatedValue,
-            ttlMs: res.ttlMs
-          };
-        });
-      } else {
-        // Fallback: read, update, write
-        const current = await storage.get(key);
-        const validatedCurrent = current !== undefined ? schema.parse(current) : undefined;
-        const res = updater(validatedCurrent);
-        if (res) {
-          const validatedValue = schema.parse(res.value);
-          await storage.set(key, validatedValue, res.ttlMs);
-          return validatedValue;
-        }
-        return validatedCurrent;
-      }
-    }
-  };
-}
 
 // Storage schemas for different rate limit types
 export const rateLimitStoreData = z.object({
+    type: z.literal('fixed-window'),
     count: z.number().int().min(0),
 });
 
 export const slidingWindowStoreData = z.object({
+    type: z.literal('sliding-window'),
     timestamps: z.array(z.number().int().min(0)),
 });
 
+export const tokenBucketStoreData = z.object({
+    type: z.literal('token-bucket'),
+    remainingTokens: z.number().int().min(0),
+    lastRefillAt: z.number().int().min(0),
+});
 
-// Unified storage type that can handle both fixed-window and sliding-window
-// This is a union of both storage data types - users provide storage that handles this union type
+// Unified storage type that can handle fixed-window, sliding-window, and token-bucket
+// This is a union of all storage data types - users provide storage that handles this union type
 export const rateLimitStorageData = z.union([
     rateLimitStoreData,
     slidingWindowStoreData,
+    tokenBucketStoreData,
 ]);
 
-// Rate limit config schema using discriminated union
-export const fixedWindowConfigSchema = z.object({
-    type: z.literal('fixed-window'),
+// Rate limit config schema - unified with standardized properties
+export const rateLimitConfigSchema = z.object({
+    type: z.enum(['fixed-window', 'sliding-window', 'token-bucket']),
     key: z.string(),
     limit: z.number().int().min(0),
-    windowMs: z.string(),
+    period: z.string(),
+    cost: z.number().int().min(1).optional(),
 });
-
-export const slidingWindowConfigSchema = z.object({
-    type: z.literal('sliding-window'),
-    key: z.string(),
-    limit: z.number().int().min(0),
-    windowMs: z.string(),
-});
-
-export const rateLimitConfigSchema = z.discriminatedUnion('type', [
-    fixedWindowConfigSchema,
-    slidingWindowConfigSchema,
-]);
 
 export type RateLimitConfig = z.infer<typeof rateLimitConfigSchema>;
-export type FixedWindowConfig = z.infer<typeof fixedWindowConfigSchema>;
-export type SlidingWindowConfig = z.infer<typeof slidingWindowConfigSchema>;
+
+// Type aliases for clarity (narrowed types)
+export type FixedWindowConfig = RateLimitConfig & { type: 'fixed-window' };
+export type SlidingWindowConfig = RateLimitConfig & { type: 'sliding-window' };
+export type TokenBucketConfig = RateLimitConfig & { type: 'token-bucket' };
 
 // Result schema
 export const rateLimitCheckResultSchema = z.object({
@@ -122,6 +57,7 @@ export type RateLimitCheckResult = z.infer<typeof rateLimitCheckResultSchema>;
 // Storage data types
 export type FixedWindowStorageData = z.infer<typeof rateLimitStoreData>;
 export type SlidingWindowStorageData = z.infer<typeof slidingWindowStoreData>;
+export type TokenBucketStorageData = z.infer<typeof tokenBucketStoreData>;
 export type RateLimitStorageData = z.infer<typeof rateLimitStorageData>;
 
 /**
@@ -143,7 +79,7 @@ async function checkFixedWindowRateLimit(
 
   let current = 0;
 
-  if(data?.type === 'fixed-window'){
+  if (data && 'type' in data && data.type === 'fixed-window') {
     current = data.count;
   }
   
@@ -181,7 +117,7 @@ async function checkSlidingWindowRateLimit(
 
   let timestamps: number[] = [];
 
-  if(data?.type === 'sliding-window'){
+  if (data && 'type' in data && data.type === 'sliding-window') {
     timestamps = data.timestamps;
   }
   
@@ -224,6 +160,82 @@ async function checkSlidingWindowRateLimit(
  * @param config - Rate limit configuration with discriminated union type
  * @param clock - Optional clock function for testing (defaults to Date.now)
  */
+/**
+ * Calculates the token refill rate (tokens per millisecond) based on limit and period.
+ * 
+ * @param limit - Maximum number of tokens the bucket can hold
+ * @param period - Time period string (e.g. "1d", "1h", "30m") representing time to refill from empty to full
+ * @returns Tokens per millisecond
+ */
+function calculateTokenRefillRate(limit: number, period: string): number {
+  const periodMs = ms(period as ms.StringValue);
+  if (isNaN(periodMs) || periodMs <= 0) {
+    throw new Error(`Invalid period: ${period}`);
+  }
+  return limit / periodMs;
+}
+
+/**
+ * Checks rate limit without incrementing the counter for token-bucket.
+ * Use this in your rule's evaluate function.
+ */
+async function checkTokenBucketRateLimit(
+  storage: RateLimitStorage,
+  config: TokenBucketConfig,
+  now: number
+): Promise<RateLimitCheckResult> {
+  const data = await storage.get(config.key);
+  
+  let tokens = config.limit;
+  let lastRefillAt = now;
+
+  if (data && 'type' in data && data.type === 'token-bucket') {
+    // Handle backward compatibility: support both 'tokens' (old) and 'remainingTokens' (new)
+    tokens = 'remainingTokens' in data ? data.remainingTokens : (data as any).tokens ?? config.limit;
+    lastRefillAt = data.lastRefillAt;
+  }
+
+  // Calculate refill rate
+  const tokensPerMs = calculateTokenRefillRate(config.limit, config.period);
+  
+  // Calculate elapsed time since last refill
+  const elapsedMs = now - lastRefillAt;
+  
+  // Refill tokens based on elapsed time
+  if (elapsedMs > 0) {
+    const tokensToAdd = elapsedMs * tokensPerMs;
+    tokens = Math.min(config.limit, tokens + tokensToAdd);
+  }
+
+  // Get cost (default: 1)
+  const cost = config.cost ?? 1;
+  
+  // Check if enough tokens are available
+  const available = tokens >= cost;
+  const remaining = Math.floor(tokens - cost);
+  
+  // Calculate resetAt: when the bucket will be full again
+  const tokensNeeded = config.limit - tokens;
+  const msUntilFull = tokensNeeded > 0 ? tokensNeeded / tokensPerMs : 0;
+  const resetAt = now + Math.ceil(msUntilFull);
+
+  if (!available) {
+    return rateLimitCheckResultSchema.parse({
+      allowed: false,
+      remaining: Math.max(0, Math.floor(tokens)),
+      resetAt,
+      reason: `rate_limit_exceeded: need ${cost} tokens but only ${Math.floor(tokens)} available, resets at ${new Date(resetAt).toISOString()}`
+    });
+  }
+
+  return rateLimitCheckResultSchema.parse({
+    allowed: true,
+    remaining: Math.max(0, remaining),
+    resetAt,
+    reason: `rate_limit_passed: ${remaining} tokens remaining after consuming ${cost}`
+  });
+}
+
 export async function checkRateLimit<TConfig extends RateLimitConfig>(
   storage: RateLimitStorage,
   config: TConfig,
@@ -232,23 +244,29 @@ export async function checkRateLimit<TConfig extends RateLimitConfig>(
   // Validate config with Zod schema
   const validatedConfig = rateLimitConfigSchema.parse(config);
   const now = clock?.() || Date.now();
-  const windowMs = ms(validatedConfig.windowMs as ms.StringValue);
 
   if (validatedConfig.type === 'fixed-window') {
-    // The unified storage handles both types, so we can safely cast for fixed-window operations
+    const windowMs = ms(validatedConfig.period as ms.StringValue);
     return checkFixedWindowRateLimit(
       storage,
-      validatedConfig,
+      validatedConfig as FixedWindowConfig,
+      now,
+      windowMs
+    );
+  } else if (validatedConfig.type === 'sliding-window') {
+    const windowMs = ms(validatedConfig.period as ms.StringValue);
+    return checkSlidingWindowRateLimit(
+      storage,
+      validatedConfig as SlidingWindowConfig,
       now,
       windowMs
     );
   } else {
-    // The unified storage handles both types, so we can safely cast for sliding-window operations
-    return checkSlidingWindowRateLimit(
+    // token-bucket
+    return checkTokenBucketRateLimit(
       storage,
-      validatedConfig,
-      now,
-      windowMs
+      validatedConfig as TokenBucketConfig,
+      now
     );
   }
 }
@@ -269,10 +287,10 @@ async function incrementFixedWindowRateLimit(
   
   // Increment the counter atomically
   if (storage.update) {
-    await storage.update(windowKey, (data: RateLimitStoreData | undefined) => {
+    await storage.update(windowKey, (data: RateLimitStorageData | undefined) => {
       // Handle existing fixed-window data or create new
-      const current = data?.type === 'fixed-window' ? data.count : 0;
-      const newValue: RateLimitStoreData = {
+      const current = (data && 'type' in data && data.type === 'fixed-window') ? data.count : 0;
+      const newValue: RateLimitStorageData = {
         type: 'fixed-window',
         count: current + 1,
       };
@@ -285,8 +303,8 @@ async function incrementFixedWindowRateLimit(
   } else {
     // Fallback: read, increment, write
     const data = await storage.get(windowKey);
-    const current = data?.type === 'fixed-window' ? data.count : 0;
-    const newValue: RateLimitStoreData = {
+    const current = (data && 'type' in data && data.type === 'fixed-window') ? data.count : 0;
+    const newValue: RateLimitStorageData = {
       type: 'fixed-window',
       count: current + 1,
     };
@@ -306,10 +324,10 @@ async function incrementSlidingWindowRateLimit(
 ): Promise<void> {
   // For sliding-window, add current timestamp
   if (storage.update) {
-    await storage.update(config.key, (data: RateLimitStoreData | undefined) => {
+    await storage.update(config.key, (data: RateLimitStorageData | undefined) => {
       // Handle existing sliding-window data or create new
       let timestamps: number[] = [];
-      if (data?.type === 'sliding-window') {
+      if (data && 'type' in data && data.type === 'sliding-window') {
         timestamps = data.timestamps;
       }
       
@@ -318,7 +336,7 @@ async function incrementSlidingWindowRateLimit(
       const validTimestamps = timestamps.filter((ts: number) => ts > windowStart);
       validTimestamps.push(now);
       
-      const newValue: RateLimitStoreData = {
+      const newValue: RateLimitStorageData = {
         type: 'sliding-window',
         timestamps: validTimestamps,
       };
@@ -332,17 +350,98 @@ async function incrementSlidingWindowRateLimit(
     // Fallback: read, update, write
     const data = await storage.get(config.key);
     let timestamps: number[] = [];
-    if (data?.type === 'sliding-window') {
+    if (data && 'type' in data && data.type === 'sliding-window') {
       timestamps = data.timestamps;
     }
     const windowStart = now - windowMs;
     const validTimestamps = timestamps.filter((ts: number) => ts > windowStart);
     validTimestamps.push(now);
-    const newValue: RateLimitStoreData = {
+    const newValue: RateLimitStorageData = {
       type: 'sliding-window',
       timestamps: validTimestamps,
     };
     await storage.set(config.key, newValue, windowMs);
+  }
+}
+
+/**
+ * Increments the rate limit counter for token-bucket.
+ * Use this in your rule's onAllow hook.
+ */
+async function incrementTokenBucketRateLimit(
+  storage: RateLimitStorage,
+  config: TokenBucketConfig,
+  now: number
+): Promise<void> {
+  const tokensPerMs = calculateTokenRefillRate(config.limit, config.period);
+  const periodMs = ms(config.period as ms.StringValue);
+  
+  if (storage.update) {
+    await storage.update(config.key, (data: RateLimitStorageData | undefined) => {
+      let tokens = config.limit;
+      let lastRefillAt = now;
+
+      if (data && 'type' in data && data.type === 'token-bucket') {
+        // Handle backward compatibility: support both 'tokens' (old) and 'remainingTokens' (new)
+        tokens = 'remainingTokens' in data ? data.remainingTokens : (data as any).tokens ?? config.limit;
+        lastRefillAt = data.lastRefillAt;
+      }
+
+      // Calculate elapsed time since last refill
+      const elapsedMs = now - lastRefillAt;
+      
+      // Refill tokens based on elapsed time
+      if (elapsedMs > 0) {
+        const tokensToAdd = elapsedMs * tokensPerMs;
+        tokens = Math.min(config.limit, tokens + tokensToAdd);
+      }
+
+      // Consume tokens (default: 1, or use cost if specified)
+      const cost = config.cost ?? 1;
+      tokens = Math.max(0, tokens - cost);
+
+      const newValue: RateLimitStorageData = {
+        type: 'token-bucket',
+        remainingTokens: Math.floor(tokens),
+        lastRefillAt: now,
+      };
+      
+      return {
+        value: newValue,
+        ttlMs: periodMs
+      };
+    });
+  } else {
+    // Fallback: read, update, write
+    const data = await storage.get(config.key);
+    let tokens = config.limit;
+    let lastRefillAt = now;
+
+    if (data && 'type' in data && data.type === 'token-bucket') {
+      tokens = data.remainingTokens;
+      lastRefillAt = data.lastRefillAt;
+    }
+
+    // Calculate elapsed time since last refill
+    const elapsedMs = now - lastRefillAt;
+    
+    // Refill tokens based on elapsed time
+    if (elapsedMs > 0) {
+      const tokensToAdd = elapsedMs * tokensPerMs;
+      tokens = Math.min(config.limit, tokens + tokensToAdd);
+    }
+
+    // Consume tokens (default: 1, or use cost if specified)
+    const cost = config.cost ?? 1;
+    tokens = Math.max(0, tokens - cost);
+
+    const newValue: RateLimitStorageData = {
+      type: 'token-bucket',
+      remainingTokens: Math.floor(tokens),
+      lastRefillAt: now,
+    };
+    
+    await storage.set(config.key, newValue, periodMs);
   }
 }
 
@@ -363,21 +462,29 @@ export async function incrementRateLimit(
   // Validate config with Zod schema
   const validatedConfig = rateLimitConfigSchema.parse(config);
   const now = clock?.() || Date.now();
-  const windowMs = ms(validatedConfig.windowMs as ms.StringValue);
 
   if (validatedConfig.type === 'fixed-window') {
+    const windowMs = ms(validatedConfig.period as ms.StringValue);
     await incrementFixedWindowRateLimit(
       storage,
-      validatedConfig,
+      validatedConfig as FixedWindowConfig,
+      now,
+      windowMs
+    );
+  } else if (validatedConfig.type === 'sliding-window') {
+    const windowMs = ms(validatedConfig.period as ms.StringValue);
+    await incrementSlidingWindowRateLimit(
+      storage,
+      validatedConfig as SlidingWindowConfig,
       now,
       windowMs
     );
   } else {
-    await incrementSlidingWindowRateLimit(
+    // token-bucket
+    await incrementTokenBucketRateLimit(
       storage,
-      validatedConfig,
-      now,
-      windowMs
+      validatedConfig as TokenBucketConfig,
+      now
     );
   }
 }
