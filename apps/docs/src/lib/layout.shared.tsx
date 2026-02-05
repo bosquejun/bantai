@@ -17,7 +17,6 @@ export function baseOptions(): BaseLayoutProps {
     links:[{
       text:'Docs',
       url:'/docs',
-      
     }]
   };
 }

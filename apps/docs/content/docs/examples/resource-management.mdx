@@ -45,7 +45,7 @@ const rateLimitedContext = withRateLimit(apiContext, {
     rateLimit: {
       type: 'fixed-window',
       limit: 100,
-      windowMs: '1h',
+      period: '1h',
     },
   },
 });
@@ -86,7 +86,7 @@ const result2 = await evaluatePolicy(rateLimitPolicy, {
   rateLimit: {
     type: 'fixed-window',
     limit: 200, // Higher limit for this specific request
-    windowMs: '1h',
+    period: '1h',
   },
 });
 
@@ -98,7 +98,7 @@ const result3 = await evaluatePolicy(rateLimitPolicy, {
     key: 'custom:key:override', // Custom key instead of generated one
     type: 'fixed-window',
     limit: 100,
-    windowMs: '1h',
+    period: '1h',
   },
 });
 ```

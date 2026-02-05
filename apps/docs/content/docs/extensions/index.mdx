@@ -118,7 +118,7 @@ const rule = defineRule(enhancedContext, 'api-rule', async (input, { tools }) =>
   const cached = await tools.storage.get(`cache:${input.userId}`);
   const rateLimitResult = await tools.rateLimit.checkRateLimit(
     tools.storage,
-    { key: `api:${input.userId}`, type: 'fixed-window', limit: 100, windowMs: '1h' }
+    { key: `api:${input.userId}`, type: 'fixed-window', limit: 100, period: '1h' }
   );
   // ...
 });

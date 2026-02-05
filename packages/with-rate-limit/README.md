@@ -47,7 +47,7 @@ const rateLimitedContext = withRateLimit(apiContext, {
     rateLimit: {
       type: 'fixed-window',
       limit: 100,
-      windowMs: '1h',
+      period: '1h',
     },
   },
 });
@@ -65,7 +65,7 @@ const rateLimitRule = defineRateLimitRule(
   {
     config: {
       limit: 100,
-      windowMs: '1h',
+      period: '1h',
       type: 'fixed-window',
     },
   }
@@ -102,7 +102,7 @@ Fixed window rate limiting divides time into discrete windows. All requests with
   type: 'fixed-window',
   key: 'user:123',
   limit: 100,
-  windowMs: '1h', // Supports ms format: '1h', '30m', '5s', etc.
+  period: '1h', // Supports ms format: '1h', '30m', '5s', etc.
 }
 ```
 
@@ -117,7 +117,7 @@ Sliding window rate limiting tracks individual request timestamps. Only requests
   type: 'sliding-window',
   key: 'user:123',
   limit: 100,
-  windowMs: '1h',
+  period: '1h',
 }
 ```
 
@@ -131,15 +131,15 @@ Token bucket rate limiting uses a bucket that refills at a constant rate. Reques
 {
   type: 'token-bucket',
   key: 'user:123',
-  capacity: 10000,
-  refillPeriod: '1d', // Refills to full capacity (10k tokens) over 1 day
-  tokenCost: 1, // Optional: tokens consumed per request (default: 1)
+  limit: 10000,
+  period: '1d', // Refills to full capacity (10k tokens) over 1 day
+  cost: 1, // Optional: tokens consumed per request (default: 1)
 }
 ```
 
-**Note**: The `refillPeriod` is a time period (e.g. `"1d"`, `"1h"`, `"30m"`) representing the time to refill from empty to full capacity. The refill rate is automatically calculated as `capacity / period`. For example, `capacity: 10_000` and `refillPeriod: '1d'` means the bucket can hold 10,000 tokens and refills at a rate of 10,000 tokens per day.
+**Note**: The `period` is a time period (e.g. `"1d"`, `"1h"`, `"30m"`) representing the time to refill from empty to full capacity. The refill rate is automatically calculated as `limit / period`. For example, `limit: 10_000` and `period: '1d'` means the bucket can hold 10,000 tokens and refills at a rate of 10,000 tokens per day.
 
-**Token Cost**: The `tokenCost` parameter (optional, default: 1) specifies how many tokens each request consumes. This allows you to implement variable-cost rate limiting where different operations consume different amounts of tokens. For example, a simple API call might cost 1 token, while a complex operation might cost 5 tokens.
+**Cost**: The `cost` parameter (optional, default: 1) specifies how many tokens/requests each operation consumes. This allows you to implement variable-cost rate limiting where different operations consume different amounts. For example, a simple API call might cost 1, while a complex operation might cost 5. This parameter works for all rate limiting strategies.
 
 ## API Reference
 
@@ -166,7 +166,7 @@ const rateLimitedContext = withRateLimit(apiContext, {
     rateLimit: {
       type: 'fixed-window',
       limit: 100,
-      windowMs: '1h',
+      period: '1h',
     },
   },
 });
@@ -256,7 +256,7 @@ const userRateLimitRule = defineRule(
         key: `user:${input.userId}`,
         type: 'fixed-window',
         limit: 1000,
-        windowMs: '24h',
+        period: '24h',
       }
     );
 
@@ -270,7 +270,7 @@ const userRateLimitRule = defineRule(
           key: `user:${input.userId}`,
           type: 'fixed-window',
           limit: 1000,
-          windowMs: '24h',
+          period: '24h',
         }
       );
     },
@@ -284,16 +284,16 @@ const userRateLimitRule = defineRule(
 import { defineRule, allow, deny } from '@bantai-dev/core';
 
 const endpointLimits = {
-  '/api/auth/login': { limit: 5, windowMs: '15m' },
-  '/api/payment': { limit: 10, windowMs: '1m' },
-  '/api/search': { limit: 100, windowMs: '1m' },
+  '/api/auth/login': { limit: 5, period: '15m' },
+  '/api/payment': { limit: 10, period: '1m' },
+  '/api/search': { limit: 100, period: '1m' },
 };
 
 const endpointRateLimitRule = defineRule(
   rateLimitedContext,
   'endpoint-rate-limit',
   async (input, { tools }) => {
-    const config = endpointLimits[input.endpoint] || { limit: 50, windowMs: '1h' };
+    const config = endpointLimits[input.endpoint] || { limit: 50, period: '1h' };
     
     const result = await tools.rateLimit.checkRateLimit(
       tools.storage,
@@ -301,7 +301,7 @@ const endpointRateLimitRule = defineRule(
         key: `endpoint:${input.endpoint}:${input.userId}`,
         type: 'sliding-window',
         limit: config.limit,
-        windowMs: config.windowMs,
+        period: config.period,
       }
     );
 
@@ -309,7 +309,7 @@ const endpointRateLimitRule = defineRule(
   },
   {
     onAllow: async (result, input, { tools }) => {
-      const config = endpointLimits[input.endpoint] || { limit: 50, windowMs: '1h' };
+      const config = endpointLimits[input.endpoint] || { limit: 50, period: '1h' };
       
       await tools.rateLimit.incrementRateLimit(
         tools.storage,
@@ -317,7 +317,7 @@ const endpointRateLimitRule = defineRule(
           key: `endpoint:${input.endpoint}:${input.userId}`,
           type: 'sliding-window',
           limit: config.limit,
-          windowMs: config.windowMs,
+          period: config.period,
         }
       );
     },
@@ -331,9 +331,9 @@ const endpointRateLimitRule = defineRule(
 import { defineRule, allow, deny } from '@bantai-dev/core';
 
 const tierLimits = {
-  free: { limit: 100, windowMs: '1h' },
-  premium: { limit: 1000, windowMs: '1h' },
-  enterprise: { limit: 10000, windowMs: '1h' },
+  free: { limit: 100, period: '1h' },
+  premium: { limit: 1000, period: '1h' },
+  enterprise: { limit: 10000, period: '1h' },
 };
 
 const tierRateLimitRule = defineRule(
@@ -347,8 +347,8 @@ const tierRateLimitRule = defineRule(
       {
         key: `tier:${input.userTier}:${input.userId}`,
         type: 'token-bucket',
-        capacity: config.limit,
-        refillPeriod: '1h', // Refills to full capacity over 1 hour
+        limit: config.limit,
+        period: '1h', // Refills to full capacity over 1 hour
       }
     );
 
@@ -363,8 +363,8 @@ const tierRateLimitRule = defineRule(
         {
           key: `tier:${input.userTier}:${input.userId}`,
           type: 'token-bucket',
-          capacity: config.limit,
-          refillPeriod: '1h', // Refills to full capacity over 1 hour
+          limit: config.limit,
+          period: '1h', // Refills to full capacity over 1 hour
         }
       );
     },
