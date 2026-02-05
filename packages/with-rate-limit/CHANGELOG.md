@@ -1,5 +1,17 @@
 # @bantai-dev/with-rate-limiting
 
+## 1.0.0
+
+### Major Changes
+
+- Initial version
+
+### Patch Changes
+
+- Updated dependencies
+  - @bantai-dev/core@1.0.0
+  - @bantai-dev/with-storage@1.0.0
+
 ## 0.6.0
 
 ### Minor Changes

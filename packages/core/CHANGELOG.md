@@ -1,5 +1,11 @@
 # @bantai-dev/core
 
+## 1.0.0
+
+### Major Changes
+
+- Initial version
+
 ## 0.6.0
 
 ### Minor Changes
