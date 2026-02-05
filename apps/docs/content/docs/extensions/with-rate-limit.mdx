@@ -58,6 +58,13 @@ const rateLimitRule = defineRateLimitRule(
     // Your business logic here
     // Rate limit is already checked and will be incremented on allow
     return allow({ reason: 'Request allowed' });
+  },
+  {
+    config: {
+      limit: 100,
+      windowMs: '1h',
+      type: 'fixed-window',
+    },
   }
 );
 

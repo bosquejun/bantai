@@ -4,6 +4,8 @@
 
 Production-ready Redis storage adapter for Bantai with distributed locking, atomic operations, and TTL support. Perfect for rate limiting, caching, and distributed storage needs.
 
+**Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+
 ## Installation
 
 ```bash
@@ -49,18 +51,21 @@ const context = withStorage(
 );
 
 // 4. Use in rules
-const userRule = context.defineRule('get-user', {
-  kind: 'function',
-  evaluate: async (input) => {
-    const user = await input.tools.storage.get(`user:${input.userId}`);
+import { defineRule, allow, deny } from '@bantai-dev/core';
+
+const userRule = defineRule(
+  context,
+  'get-user',
+  async (input, { tools }) => {
+    const user = await tools.storage.get(`user:${input.userId}`);
     
     if (!user) {
-      return deny('User not found');
+      return deny({ reason: 'User not found' });
     }
 
-    return allow(`User: ${user.name}`);
-  },
-});
+    return allow({ reason: `User: ${user.name}` });
+  }
+);
 ```
 
 ## Features
@@ -191,23 +196,26 @@ const context = withStorage(
   storage
 );
 
-const sessionRule = context.defineRule('check-session', {
-  kind: 'function',
-  evaluate: async (input) => {
-    const session = await input.tools.storage.get(input.sessionId);
+import { defineRule, allow, deny } from '@bantai-dev/core';
+
+const sessionRule = defineRule(
+  context,
+  'check-session',
+  async (input, { tools }) => {
+    const session = await tools.storage.get(input.sessionId);
     
     if (!session) {
-      return deny('Session not found');
+      return deny({ reason: 'Session not found' });
     }
 
     if (session.expiresAt < Date.now()) {
-      await input.tools.storage.delete(input.sessionId);
-      return deny('Session expired');
+      await tools.storage.delete(input.sessionId);
+      return deny({ reason: 'Session expired' });
     }
 
-    return allow('Session valid');
-  },
-});
+    return allow({ reason: 'Session valid' });
+  }
+);
 ```
 
 ### Atomic Updates
@@ -229,11 +237,12 @@ const context = withStorage(
   storage
 );
 
-const incrementRule = context.defineRule('increment', {
-  kind: 'function',
-  evaluate: async (input) => {
+const incrementRule = defineRule(
+  context,
+  'increment',
+  async (input, { tools }) => {
     // Atomic increment - safe for concurrent access
-    const newValue = await input.tools.storage.update(
+    const newValue = await tools.storage.update(
       input.counterKey,
       (current) => {
         const count = current?.count || 0;
@@ -244,9 +253,9 @@ const incrementRule = context.defineRule('increment', {
       }
     );
 
-    return allow(`Counter: ${newValue?.count}`);
-  },
-});
+    return allow({ reason: `Counter: ${newValue?.count}` });
+  }
+);
 ```
 
 ### TTL (Time-to-Live)
@@ -269,18 +278,19 @@ const context = withStorage(
   storage
 );
 
-const cacheRule = context.defineRule('get-cached', {
-  kind: 'function',
-  evaluate: async (input) => {
-    const cached = await input.tools.storage.get(input.cacheKey);
+const cacheRule = defineRule(
+  context,
+  'get-cached',
+  async (input, { tools }) => {
+    const cached = await tools.storage.get(input.cacheKey);
     
     if (cached) {
-      return allow('Cache hit');
+      return allow({ reason: 'Cache hit' });
     }
 
     // Fetch and cache with 5 minute TTL
     const data = await fetchData();
-    await input.tools.storage.set(
+    await tools.storage.set(
       input.cacheKey,
       {
         data,
@@ -289,9 +299,9 @@ const cacheRule = context.defineRule('get-cached', {
       5 * 60 * 1000 // 5 minutes - Redis will auto-expire
     );
 
-    return allow('Data cached');
-  },
-});
+    return allow({ reason: 'Data cached' });
+  }
+);
 ```
 
 ### Integration with Rate Limiting
@@ -408,6 +418,12 @@ const storage = createRedisStorage(
 - @bantai-dev/with-storage
 - @bantai-dev/core
 - Redis server
+
+## Links
+
+- **Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+- **GitHub Repository**: [https://github.com/bosquejun/bantai](https://github.com/bosquejun/bantai)
+- **npm Package**: [https://www.npmjs.com/package/@bantai-dev/storage-redis](https://www.npmjs.com/package/@bantai-dev/storage-redis)
 
 ## License
 

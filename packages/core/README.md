@@ -2,7 +2,9 @@
 
 > TypeScript-first policy evaluation library for rule-based validation and decision-making
 
-Bantai is a powerful, type-safe policy evaluation library that enables you to build complex validation and decision-making logic using composable rules, policies, and presets. Built with TypeScript and Zod, it provides end-to-end type safety while remaining flexible enough to handle diverse use cases.
+Bantai is a powerful, type-safe policy evaluation library that enables you to build complex validation and decision-making logic using composable rules and policies. Built with TypeScript and Zod, it provides end-to-end type safety while remaining flexible enough to handle diverse use cases.
+
+**Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
 
 ## Installation
 
@@ -22,9 +24,8 @@ yarn add @bantai-dev/core zod
 import { z } from 'zod';
 import { 
   allow, 
-  createBantai, 
-  defineConfig, 
   defineContext, 
+  defineRule,
   definePolicy, 
   deny, 
   evaluatePolicy 
@@ -38,39 +39,34 @@ const ageContext = defineContext(
 );
 
 // 2. Define a rule
-const ageVerificationRule = ageContext.defineRule('age-verification', {
-  kind: 'function',
-  evaluate: (input) => {
+const ageVerificationRule = defineRule(
+  ageContext,
+  'age-verification',
+  async (input) => {
     if (input.age >= 18) {
-      return allow('User is of legal age');
+      return allow({ reason: 'User is of legal age' });
     }
-    return deny('User must be 18 or older');
-  },
-});
+    return deny({ reason: 'User must be 18 or older' });
+  }
+);
 
-// 3. Define configuration
-const config = defineConfig({
-  context: ageContext,
-  rules: [ageVerificationRule],
-  policies: [
-    definePolicy({
-      id: 'age-verification-policy',
-      rules: ['rule:age-verification'],
-      strategy: 'preemptive',
-    }),
-  ],
-});
+// 3. Define a policy
+const agePolicy = definePolicy(
+  ageContext,
+  'age-verification-policy',
+  [ageVerificationRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
 
-// 4. Create Bantai instance
-const bantai = createBantai(config);
-
-// 5. Evaluate policy
-const result = await evaluatePolicy(bantai, 'age-verification-policy', {
-  age: 25,
-});
+// 4. Evaluate policy
+const result = await evaluatePolicy(agePolicy, { age: 25 });
 
 console.log(result.decision); // 'allow' or 'deny'
+console.log(result.isAllowed); // true or false
 console.log(result.violatedRules); // Array of violations
+console.log(result.evaluatedRules); // Array of all evaluated rules
 ```
 
 ## Core Concepts
@@ -97,34 +93,40 @@ const appContext = defineContext(
 Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()`.
 
 ```typescript
-const adminRule = appContext.defineRule('check-admin', {
-  kind: 'function',
-  evaluate: (input) => {
+const adminRule = defineRule(
+  appContext,
+  'check-admin',
+  async (input) => {
     if (input.role === 'admin') {
-      return allow('User is admin');
+      return allow({ reason: 'User is admin' });
     }
-    return deny('Admin access required');
+    return deny({ reason: 'Admin access required' });
   },
-  hooks: {
-    onAllow: (input) => console.log(`Admin access granted to ${input.userId}`),
-    onDeny: (input) => console.log(`Admin access denied to ${input.userId}`),
-  },
-});
+  {
+    onAllow: async (result, input, { tools }) => {
+      console.log(`Admin access granted to ${input.userId}`);
+    },
+    onDeny: async (result, input, { tools }) => {
+      console.log(`Admin access denied to ${input.userId}`);
+    },
+  }
+);
 ```
 
 Rules can be synchronous or asynchronous:
 
 ```typescript
-const asyncRule = appContext.defineRule('check-database', {
-  kind: 'function',
-  evaluate: async (input) => {
+const asyncRule = defineRule(
+  appContext,
+  'check-database',
+  async (input, { tools }) => {
     const user = await db.getUser(input.userId);
     if (user?.active) {
-      return allow('User is active');
+      return allow({ reason: 'User is active' });
     }
-    return deny('User is not active');
-  },
-});
+    return deny({ reason: 'User is not active' });
+  }
+);
 ```
 
 ### Policies
@@ -134,169 +136,95 @@ Policies combine multiple rules and define an evaluation strategy.
 **Preemptive Strategy** (fail-fast): Stops at first violation. Best for security checks and fast rejection.
 
 ```typescript
-const securityPolicy = definePolicy({
-  id: 'security-policy',
-  rules: ['rule:check-auth', 'rule:check-permissions'],
-  strategy: 'preemptive',
-});
+const securityPolicy = definePolicy(
+  appContext,
+  'security-policy',
+  [authRule, permissionRule],
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
 ```
 
 **Exhaustive Strategy**: Collects all violations. Best for form validation and comprehensive feedback.
 
 ```typescript
-const validationPolicy = definePolicy({
-  id: 'validation-policy',
-  rules: ['rule:check-email', 'rule:check-password', 'rule:check-terms'],
-  strategy: 'exhaustive',
-});
-```
-
-### Presets
-
-Presets are reusable rule sets that can be shared across policies. They automatically namespace rules to avoid conflicts.
-
-```typescript
-const inventoryContext = defineContext(
-  z.object({
-    items: z.array(z.object({
-      itemId: z.string(),
-      quantity: z.number().positive(),
-    })),
-  })
+const validationPolicy = definePolicy(
+  appContext,
+  'validation-policy',
+  [emailRule, passwordRule, termsRule],
+  {
+    defaultStrategy: 'exhaustive',
+  }
 );
-
-const inventoryPreset = definePreset('inventory', {
-  context: inventoryContext,
-  rules: [
-    inventoryContext.defineRule('check-stock', {
-      kind: 'function',
-      evaluate: (input) => {
-        // Check stock availability
-        return allow();
-      },
-    }),
-    inventoryContext.defineRule('reserve-items', {
-      kind: 'function',
-      evaluate: (input) => {
-        // Reserve items
-        return allow();
-      },
-    }),
-  ],
-});
-
-// Use preset rules in policies
-const orderPolicy = definePolicy({
-  id: 'order-policy',
-  rules: [
-    'rule:preset:inventory:check-stock',
-    'rule:preset:inventory:reserve-items',
-  ],
-  strategy: 'exhaustive',
-});
-```
-
-### Context Merging
-
-When using presets, contexts are automatically merged. The main context and all preset contexts are intersected to create a merged schema.
-
-```typescript
-const mainContext = defineContext(
-  z.object({
-    userId: z.string(),
-    orderId: z.string(),
-  }),
-  undefined,
-  [inventoryPreset, paymentPreset] // Include presets
-);
-
-// Rules in mainContext can access both main and preset context fields
-const combinedRule = mainContext.defineRule('combined-check', {
-  kind: 'function',
-  evaluate: (input) => {
-    // input has: userId, orderId, items (from inventory), amount (from payment)
-    return allow();
-  },
-});
 ```
 
 ## API Reference
 
-### `defineContext<T>(schema, defaultContext?, presets?)`
+### `defineContext<T>(schema, defaultValues?, tools?)`
 
 Creates a context definition with a Zod schema.
 
 **Parameters:**
 - `schema`: Zod object schema
-- `defaultContext?`: Optional default values
-- `presets?`: Optional array of preset definitions
+- `defaultValues?`: Optional default values for context fields
+- `tools?`: Optional tools object to make available to rules
 
-**Returns:** `ContextDefinition` with a `defineRule` method
+**Returns:** `ContextDefinition`
 
-### `defineRule<T>(id, params)`
+### `defineRule<TContext, TName>(context, name, evaluate, hooks?)`
 
 Defines a rule within a context.
 
 **Parameters:**
-- `id`: Rule identifier (will be prefixed with `rule:`)
-- `params`:
-  - `kind`: `'function'`
-  - `evaluate`: Function that takes context and returns `RuleResult`
-  - `hooks?`: Optional hooks (`onAllow`, `onDeny`)
+- `context`: Context definition
+- `name`: Rule identifier
+- `evaluate`: Async function that takes input and context, returns `RuleResult`
+- `hooks?`: Optional hooks object:
+  - `onAllow?`: Function called when rule allows
+  - `onDeny?`: Function called when rule denies
 
 **Returns:** `RuleDefinition`
 
-### `definePreset<T>(name, params)`
+**Example:**
+```typescript
+const rule = defineRule(
+  context,
+  'my-rule',
+  async (input, { tools }) => {
+    // Evaluation logic
+    return allow({ reason: 'Success' });
+  },
+  {
+    onAllow: async (result, input, { tools }) => {
+      // Side effect on allow
+    },
+  }
+);
+```
 
-Creates a reusable preset with its own context and rules.
-
-**Parameters:**
-- `name`: Preset name (will namespace rules as `rule:preset:{name}:{ruleId}`)
-- `params`:
-  - `context`: Context definition
-  - `rules`: Array of rules
-
-**Returns:** `PresetDefinition`
-
-### `definePolicy(params)`
+### `definePolicy<TContext, TName>(context, name, rules, options?)`
 
 Defines a policy that combines multiple rules.
 
 **Parameters:**
-- `id`: Policy identifier
-- `rules`: Array of rule IDs (can include preset rules)
-- `strategy`: `'preemptive'` or `'exhaustive'`
+- `context`: Context definition (must match all rules)
+- `name`: Policy identifier
+- `rules`: Array of rule definitions
+- `options?`: Optional configuration:
+  - `defaultStrategy?`: `'preemptive'` or `'exhaustive'` (default: `'preemptive'`)
 
 **Returns:** `PolicyDefinition`
 
-### `defineConfig(params)`
+### `evaluatePolicy(policy, input, options?)`
 
-Creates a configuration that brings together context, rules, and policies.
-
-**Parameters:**
-- `context`: Context definition
-- `rules`: Array of rule definitions
-- `policies?`: Optional array of policy definitions
-
-**Returns:** `ConfigDefinition`
-
-### `createBantai(config)`
-
-Creates an immutable Bantai instance from a configuration.
+Evaluates a policy against input data.
 
 **Parameters:**
-- `config`: Configuration definition
-
-**Returns:** `BantaiInstance`
-
-### `evaluatePolicy(bantai, policyName, currentContext)`
-
-Evaluates a policy against a current context.
-
-**Parameters:**
-- `bantai`: Bantai instance
-- `policyName`: Policy ID (type-safe)
-- `currentContext`: Context data to evaluate
+- `policy`: Policy definition
+- `input`: Context data to evaluate (must match policy's context schema)
+- `options?`: Optional evaluation options:
+  - `strategy?`: Override default strategy for this evaluation
 
 **Returns:** `Promise<PolicyResult>`
 
@@ -312,14 +240,20 @@ Evaluates a policy against a current context.
 }
 ```
 
-### `allow(message?)` / `deny(message?)`
+### `allow(reason?)` / `deny(reason?)`
 
 Helper functions to create rule results.
 
 **Parameters:**
-- `message?`: Optional message describing the result
+- `reason?`: Optional object with `reason` property describing the result
 
 **Returns:** `RuleResult`
+
+**Example:**
+```typescript
+return allow({ reason: 'User is valid' });
+return deny({ reason: 'User is invalid' });
+```
 
 ## Type Safety
 
@@ -332,17 +266,21 @@ Bantai provides full TypeScript type safety:
 - **Merged Contexts**: Automatic type inference for merged contexts with presets
 
 ```typescript
-// TypeScript will enforce that only valid policy IDs are used
-const result = await evaluatePolicy(bantai, 'age-verification-policy', {
-  age: 25, // TypeScript ensures all required context fields are provided
+// TypeScript will enforce that all required context fields are provided
+const result = await evaluatePolicy(agePolicy, {
+  age: 25, // ✅ TypeScript ensures this field exists
+  // invalidField: 'test', // ❌ TypeScript error
 });
 
-// TypeScript will catch invalid rule references
-const invalidPolicy = definePolicy({
-  id: 'invalid',
-  rules: ['rule:non-existent-rule'], // ❌ Type error if rule doesn't exist
-  strategy: 'preemptive',
-});
+// TypeScript ensures rules belong to the same context
+const policy = definePolicy(
+  ageContext,
+  'my-policy',
+  [ageVerificationRule], // ✅ Rules must use the same context
+  {
+    defaultStrategy: 'preemptive',
+  }
+);
 ```
 
 ## Examples
@@ -380,6 +318,12 @@ Bantai is designed for policy-based decision-making across various domains:
 - Node.js >= 18
 - TypeScript >= 5.0
 - Zod >= 4.3.5
+
+## Links
+
+- **Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+- **GitHub Repository**: [https://github.com/bosquejun/bantai](https://github.com/bosquejun/bantai)
+- **npm Package**: [https://www.npmjs.com/package/@bantai-dev/core](https://www.npmjs.com/package/@bantai-dev/core)
 
 ## License
 

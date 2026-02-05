@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to Bantai! This document provides guidelines and instructions for contributing.
 
+**Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+
 ## Development Setup
 
 ### Prerequisites
@@ -14,7 +16,7 @@ Thank you for your interest in contributing to Bantai! This document provides gu
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/bantai.git
+   git clone https://github.com/bosquejun/bantai.git
    cd bantai
    ```
 3. Install dependencies:

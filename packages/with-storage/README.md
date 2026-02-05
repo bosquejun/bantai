@@ -4,6 +4,8 @@
 
 Add storage capabilities to your Bantai contexts. This package provides the storage adapter interface and utilities for integrating storage backends with Bantai.
 
+**Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+
 ## Installation
 
 ```bash
@@ -44,24 +46,27 @@ const storage = createMemoryStorage(userDataSchema);
 const contextWithStorage = withStorage(appContext, storage);
 
 // 5. Use storage in rules
-const userRule = contextWithStorage.defineRule('check-user', {
-  kind: 'function',
-  evaluate: async (input) => {
-    const userData = await input.tools.storage.get(`user:${input.userId}`);
+import { defineRule, allow, deny } from '@bantai-dev/core';
+
+const userRule = defineRule(
+  contextWithStorage,
+  'check-user',
+  async (input, { tools }) => {
+    const userData = await tools.storage.get(`user:${input.userId}`);
     
     if (!userData) {
-      return deny('User not found');
+      return deny({ reason: 'User not found' });
     }
 
     // Update last login
-    await input.tools.storage.set(`user:${input.userId}`, {
+    await tools.storage.set(`user:${input.userId}`, {
       ...userData,
       lastLogin: Date.now(),
     });
 
-    return allow('User found and updated');
-  },
-});
+    return allow({ reason: 'User found and updated' });
+  }
+);
 ```
 
 ## Storage Adapter Interface
@@ -138,23 +143,26 @@ const context = withStorage(
   storage
 );
 
-const sessionRule = context.defineRule('check-session', {
-  kind: 'function',
-  evaluate: async (input) => {
-    const session = await input.tools.storage.get(input.sessionId);
+import { defineRule, allow, deny } from '@bantai-dev/core';
+
+const sessionRule = defineRule(
+  context,
+  'check-session',
+  async (input, { tools }) => {
+    const session = await tools.storage.get(input.sessionId);
     
     if (!session) {
-      return deny('Session not found');
+      return deny({ reason: 'Session not found' });
     }
 
     if (session.expiresAt < Date.now()) {
-      await input.tools.storage.delete(input.sessionId);
-      return deny('Session expired');
+      await tools.storage.delete(input.sessionId);
+      return deny({ reason: 'Session expired' });
     }
 
-    return allow('Session valid');
-  },
-});
+    return allow({ reason: 'Session valid' });
+  }
+);
 ```
 
 ### Atomic Updates
@@ -170,11 +178,12 @@ const context = withStorage(
   storage
 );
 
-const incrementRule = context.defineRule('increment-counter', {
-  kind: 'function',
-  evaluate: async (input) => {
+const incrementRule = defineRule(
+  context,
+  'increment-counter',
+  async (input, { tools }) => {
     // Atomic increment
-    const newValue = await input.tools.storage.update(
+    const newValue = await tools.storage.update(
       input.counterKey,
       (current) => {
         const count = current?.count || 0;
@@ -185,9 +194,9 @@ const incrementRule = context.defineRule('increment-counter', {
       }
     );
 
-    return allow(`Counter incremented to ${newValue?.count}`);
-  },
-});
+    return allow({ reason: `Counter incremented to ${newValue?.count}` });
+  }
+);
 ```
 
 ### TTL (Time-to-Live)
@@ -204,18 +213,19 @@ const context = withStorage(
   storage
 );
 
-const cacheRule = context.defineRule('get-cached-data', {
-  kind: 'function',
-  evaluate: async (input) => {
-    const cached = await input.tools.storage.get(input.cacheKey);
+const cacheRule = defineRule(
+  context,
+  'get-cached-data',
+  async (input, { tools }) => {
+    const cached = await tools.storage.get(input.cacheKey);
     
     if (cached) {
-      return allow('Cache hit');
+      return allow({ reason: 'Cache hit' });
     }
 
     // Fetch and cache with 5 minute TTL
     const data = await fetchData();
-    await input.tools.storage.set(
+    await tools.storage.set(
       input.cacheKey,
       {
         data,
@@ -224,9 +234,9 @@ const cacheRule = context.defineRule('get-cached-data', {
       5 * 60 * 1000 // 5 minutes
     );
 
-    return allow('Data fetched and cached');
-  },
-});
+    return allow({ reason: 'Data fetched and cached' });
+  }
+);
 ```
 
 ### Custom Storage Adapter
@@ -332,6 +342,12 @@ The package provides full TypeScript type safety:
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - @bantai-dev/core
+
+## Links
+
+- **Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+- **GitHub Repository**: [https://github.com/bosquejun/bantai](https://github.com/bosquejun/bantai)
+- **npm Package**: [https://www.npmjs.com/package/@bantai-dev/with-storage](https://www.npmjs.com/package/@bantai-dev/with-storage)
 
 ## License
 

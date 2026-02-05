@@ -1,9 +1,15 @@
 # Bantai
 
+<div align="center">
+  <img src="./logo.webp" alt="Bantai Logo" width="200" height="200">
+</div>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/@bantai-dev/core)](https://www.npmjs.com/package/@bantai-dev/core)
 
 > TypeScript-first policy evaluation library for rule-based validation and decision-making
+
+**Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
 
 Bantai is a powerful, type-safe policy evaluation library that enables you to build complex validation and decision-making logic using composable rules and policies. Built with TypeScript and Zod, it provides end-to-end type safety while remaining flexible enough to handle diverse use cases.
 
@@ -65,7 +71,10 @@ This monorepo contains the following packages:
 
 ## Documentation
 
-For detailed documentation, API reference, and examples, see the [core package README](./packages/core/README.md).
+For detailed documentation, API reference, and examples, visit:
+
+- **Official Documentation**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+- **Core Package README**: [./packages/core/README.md](./packages/core/README.md)
 
 ## Project Structure
 
@@ -128,6 +137,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 ## Links
 
+- **Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
 - [GitHub Repository](https://github.com/bosquejun/bantai)
 - [npm Package](https://www.npmjs.com/package/@bantai-dev/core)
 - [Report a Bug](https://github.com/bosquejun/bantai/issues)

@@ -21,7 +21,7 @@
     "url": "https://github.com/bosquejun/bantai.git",
     "directory": "packages/with-rate-limit"
   },
-  "homepage": "https://github.com/bosquejun/bantai#readme",
+  "homepage": "https://bantai.vercel.app/",
   "bugs": {
     "url": "https://github.com/bosquejun/bantai/issues"
   },
