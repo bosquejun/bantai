@@ -5,3 +5,4 @@ import { defaultLimitRule, mutationLimitRule } from "./rules";
 
 
 export const rateLimitPolicy = definePolicy(context, 'rate-limit-policy', [defaultLimitRule, mutationLimitRule]);
+

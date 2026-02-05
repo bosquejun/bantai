@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 import { ContextDefinition } from "../context/define-context.js";
 import { RuleDefinition } from "../rules/define-rule.js";
 import { PolicyStrategy, policySchema } from "./schema.js";
@@ -12,8 +12,6 @@ type ExtractRuleName<T> = T extends RuleDefinition<infer _, infer N>
         ? N
         : never
     : never;
-
-type ExtractShape<T> = T extends z.ZodObject<infer S> ? S : never;
 
 type RulesMap<TRules extends readonly RuleDefinition<ContextDefinition<z.ZodRawShape, Record<string, unknown>>, string>[]> = {
     [K in ExtractRuleName<TRules[number]>]: Extract<TRules[number], { name: K }>;

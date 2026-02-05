@@ -74,7 +74,7 @@ export type RuleDefinition<
   TName extends string = string,
 > = Omit<z.infer<typeof ruleSchema>, 'evaluate'> & {
     name: TName;
-    evaluate: (input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>) => Promise<RuleResult>;
+    evaluate: (input: z.infer<z.ZodObject<ExtractShape<TContext['schema']>>>, context: { tools: ExtractTools<TContext> }) => Promise<RuleResult>;
     hooks: {
         onAllow?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;
         onDeny?: RuleHookFnAsync<ExtractShape<TContext['schema']>, ExtractTools<TContext>>;

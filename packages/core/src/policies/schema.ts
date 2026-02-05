@@ -1,5 +1,5 @@
 
-import z from "zod";
+import { z } from "zod";
 import { contextSchema } from "../context/schema.js";
 import { ruleResultSchema, ruleSchema } from "../rules/schema.js";
 

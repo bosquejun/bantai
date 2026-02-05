@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 
 export const ruleFnContextSchema= <T extends z.ZodRawShape> (schema: z.ZodObject<T>) =>  {
@@ -20,7 +20,7 @@ export const ruleResultSchema = z.object({
     allowed: z.boolean(),
     reason: z.string().nullable(),
     skipped: z.boolean().default(false)
-}).brand<'RuleResult'>();
+}).brand<'BantaiRuleResult'>();
 
 
 export const ruleSchema = z.object({

@@ -18,7 +18,7 @@ export default defineConfig({
   treeshake: true,
 
   // Do NOT bundle deps like zod
-  external: ['zod', 'ms'],
+  external: ['zod'],
 
   // Single output file
   outExtension() {

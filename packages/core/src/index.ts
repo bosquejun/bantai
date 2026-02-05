@@ -1,6 +1,6 @@
 export { defineContext, type ContextDefinition, type ExtractContextShape, type ExtractContextTools } from './context/define-context.js';
 export { definePolicy, type PolicyDefinition } from './policies/define-policy.js';
-export { evaluatePolicy } from './policies/evaluate-policy.js';
+export { evaluatePolicy, type PolicyResult } from './policies/evaluate-policy.js';
 export { defineRule, type RuleDefinition } from './rules/define-rule.js';
 export { allow, deny, skip, type RuleResult } from './rules/results.js';
 

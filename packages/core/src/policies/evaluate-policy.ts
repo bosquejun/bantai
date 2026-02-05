@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 import { ContextDefinition } from "../context/define-context.js";
 import { RuleDefinition } from "../rules/define-rule.js";
 import { RuleResult } from "../rules/results.js";
@@ -124,3 +124,5 @@ export async function evaluatePolicy<
     });
 }
 
+
+export type { PolicyResult };
