@@ -117,6 +117,12 @@ importers:
       '@bantai-dev/core':
         specifier: workspace:*
         version: link:../../core
+      '@bantai-dev/with-rate-limit':
+        specifier: workspace:*
+        version: link:../../with-rate-limit
+      '@bantai-dev/with-storage':
+        specifier: workspace:*
+        version: link:../../with-storage
       openai:
         specifier: ^6.17.0
         version: 6.17.0(zod@4.3.6)

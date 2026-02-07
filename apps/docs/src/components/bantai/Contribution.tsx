@@ -22,6 +22,36 @@ export const Contribution: React.FC = () => {
             INSTALL VIA NPM
           </a>
         </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-6">
+        {/* Show Product Hunt badge based on theme */}
+        <a
+          href="https://www.producthunt.com/products/bantai?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-bantai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden dark:block"
+        >
+          <img
+            alt="Bantai - TypeScript-first policy library for rule-based decisions | Product Hunt"
+            width="250"
+            height="54"
+            src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1072407&amp;theme=dark&amp;t=1770311428895"
+          />
+        </a>
+
+        <a
+          href="https://www.producthunt.com/products/bantai?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-bantai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block dark:hidden"
+        >
+          <img
+            alt="Bantai - TypeScript-first policy library for rule-based decisions | Product Hunt"
+            width="250"
+            height="54"
+            src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1072407&amp;theme=light&amp;t=1770311428895"
+          />
+        </a>
+        </div>
       </div>
     </section>
   );
