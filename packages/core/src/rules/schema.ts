@@ -19,7 +19,8 @@ export const ruleHookFnSchema = <T extends z.ZodRawShape>(schema: z.ZodObject<T>
 export const ruleResultSchema = z.object({
     allowed: z.boolean(),
     reason: z.string().nullable(),
-    skipped: z.boolean().default(false)
+    skipped: z.boolean().default(false),
+    meta: z.record(z.string(), z.unknown()).default({}).optional()
 }).brand<'BantaiRuleResult'>();
 
 

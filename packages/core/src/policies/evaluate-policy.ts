@@ -1,7 +1,9 @@
+import { AuditTool } from "src/audit/types.js";
+import { auditEventSchema } from "src/index.js";
 import { z } from "zod";
 import { ContextDefinition } from "../context/define-context.js";
 import { RuleDefinition } from "../rules/define-rule.js";
-import { RuleResult } from "../rules/results.js";
+import { RuleResult, deny } from "../rules/results.js";
 import { ruleSchema } from "../rules/schema.js";
 import { PolicyDefinition } from "./define-policy.js";
 import { PolicyResult, PolicyStrategy, policyResultSchema } from "./schema.js";
@@ -40,7 +42,18 @@ export async function evaluatePolicy<
         ...(policy.context.defaultValues || {}),
         ...input,
     }
-    const inputValue = policy.context.schema.parse(inputData)
+    const inputValue = policy.context.schema.parse(inputData) as z.infer<typeof policy.context.schema> & {
+        audit?: Partial<Pick<z.infer<typeof auditEventSchema>, 'trace'>>
+    }
+
+    const ctx = { tools: policy.context.tools as { audit?:  AuditTool<TContext, TPolicy['name'], ExtractRuleFromPolicy<TPolicy>[]> } };
+
+    const event = ctx.tools.audit?.createAuditPolicy(policy);
+
+    event?.emit({
+        type: "policy.start",
+        trace: inputValue.audit?.trace,
+    });
 
     const violatedRules:PolicyResult['violatedRules'] = [];
     const strategy = options?.strategy || policy.options?.defaultStrategy || 'preemptive';
@@ -50,7 +63,7 @@ export async function evaluatePolicy<
     const evaluatedRules: Array<{ rule: RuleType; result: RuleResult }> = [];
 
     const createResult = ({decision, reason}: Pick<PolicyResult, 'decision' | 'reason'>) => {
-        return policyResultSchema.parse({
+        const result = policyResultSchema.parse({
             decision,
             isAllowed: decision === 'allow',
             reason,
@@ -61,15 +74,66 @@ export async function evaluatePolicy<
             })),
             strategy: strategy,
         });
+
+        event?.emit({
+            type: "policy.decision",
+            decision: {
+                outcome: decision,
+                reason,
+            },
+            trace: inputValue.audit?.trace,
+        });
+
+        event?.emit({
+            type: "policy.end",
+            trace: inputValue.audit?.trace,
+        });
+
+        return result;
     }
 
 
-    const ctx = { tools: policy.context.tools };
     
     
     for (const rule of policy.rules.values()) {
-        const result = await rule.evaluate(inputValue, ctx);
+        let result: RuleResult;
+
+        event?.emit({
+            type: "rule.start",
+            rule: {
+                name: rule.name,
+            },
+            trace: inputValue.audit?.trace,
+        });
+
+        try {
+            result = await rule.evaluate(inputValue, ctx);
+        } catch (error) {
+            result = deny({ reason: 'rule_evaluation_error' });
+        }
+
+
+        event?.emit({
+            type: "rule.decision",
+            rule: {
+                name: rule.name,
+            },
+            decision: {
+                outcome: result.allowed ? result.skipped ? 'skip' : 'allow' : 'deny',
+                reason: result.reason,
+            },
+            trace: inputValue.audit?.trace,
+        });
         
+
+        event?.emit({
+            type: "rule.end",
+            rule: {
+                name: rule.name,
+            },
+            trace: inputValue.audit?.trace,
+        });
+
         // Always collect all rules and their results
         evaluatedRules.push({ rule, result });
         

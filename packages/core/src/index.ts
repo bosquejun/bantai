@@ -1,3 +1,5 @@
+export { auditEventSchema } from './audit/schema.js';
+export type { AuditEvent, AuditHandler, AuditSink, AuditTool, CreateAuditPolicy } from './audit/types.js';
 export { defineContext, type ContextDefinition, type ExtractContextShape, type ExtractContextTools } from './context/define-context.js';
 export { definePolicy, type PolicyDefinition } from './policies/define-policy.js';
 export { evaluatePolicy, type PolicyResult } from './policies/evaluate-policy.js';
