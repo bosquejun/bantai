@@ -95,6 +95,8 @@ Type representing the result of a rule evaluation.
 type RuleResult = {
   allowed: boolean;
   reason: string | null;
+  skipped: boolean;
+  meta?: Record<string, unknown>;
 }
 ```
 
@@ -102,6 +104,8 @@ type RuleResult = {
 
 - `allowed`: `true` if rule allows, `false` if rule denies
 - `reason`: Optional reason message
+- `skipped`: `true` if rule was skipped, `false` otherwise
+- `meta?`: Optional metadata record for additional context
 
 ---
 

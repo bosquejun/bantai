@@ -23,7 +23,7 @@ A context defines the schema of data available when evaluating rules. It uses Zo
 
 ### [Rules](/docs/concepts/rules)
 
-Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()` responses.
+Rules are the building blocks that make decisions. They evaluate input and return `allow()`, `deny()`, or `skip()` responses with optional metadata.
 
 ### [Policies](/docs/concepts/policies)
 
@@ -67,9 +67,15 @@ const context = defineContext(
 // 2. Define Rules
 const ageRule = defineRule(context, 'age-check', async (input) => {
   if (input.age >= 18) {
-    return allow({ reason: 'User is of legal age' });
+    return allow({ 
+      reason: 'User is of legal age',
+      meta: { verifiedAge: input.age }
+    });
   }
-  return deny({ reason: 'User must be 18 or older' });
+  return deny({ 
+    reason: 'User must be 18 or older',
+    meta: { providedAge: input.age, requiredAge: 18 }
+  });
 });
 
 // 3. Define Policy

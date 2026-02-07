@@ -7,6 +7,7 @@
       "@bantai-dev/core", 
       "@bantai-dev/with-rate-limit",
       "@bantai-dev/with-storage", 
+      "@bantai-dev/with-audit", 
       "@bantai-dev/storage-redis"
     ]
   ],
@@ -14,5 +15,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": ["@bantai-dev/openai"]
 }

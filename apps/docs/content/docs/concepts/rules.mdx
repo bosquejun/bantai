@@ -5,7 +5,7 @@ description: The building blocks that make decisions
 
 # Rules
 
-Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()`.
+Rules are the building blocks that make decisions. They evaluate input and return `allow()`, `deny()`, or `skip()` with optional metadata.
 
 ## Basic Rule
 
@@ -95,23 +95,45 @@ const rule = defineRule(
 
 ## Rule Result
 
-Rules must return a `RuleResult` using `allow()` or `deny()`:
+Rules must return a `RuleResult` using `allow()`, `deny()`, or `skip()`:
 
 ```typescript
-// Allow with optional reason
+// Allow with optional reason and metadata
 return allow({ reason: 'User is valid' });
 return allow(); // Reason defaults to null
+return allow({
+  reason: 'User is valid',
+  meta: { userId: '123', role: 'admin' }
+});
 
-// Deny with optional reason
+// Deny with optional reason and metadata
 return deny({ reason: 'User is invalid' });
 return deny(); // Reason defaults to null
+return deny({
+  reason: 'User is invalid',
+  meta: { errorCode: 'INVALID_USER', attempts: 3 }
+});
+
+// Skip with optional reason and metadata
+return skip({ reason: 'Rule not applicable' });
+return skip(); // Reason defaults to 'skipped'
+return skip({
+  reason: 'Rule not applicable',
+  meta: { condition: 'country_not_provided' }
+});
 ```
 
-The reason is useful for:
+The `reason` is useful for:
 - Debugging
 - User feedback
 - Logging
 - Understanding why a rule passed or failed
+
+The `meta` field is useful for:
+- Storing additional context about the decision
+- Passing structured data to audit logs
+- Including error codes or diagnostic information
+- Tracking rule-specific metadata
 
 ## Best Practices
 

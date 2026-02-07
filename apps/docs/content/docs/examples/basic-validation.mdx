@@ -45,7 +45,10 @@ const countryAgeRule = defineRule(
   'country-age',
   async (input) => {
     if (!input.country) {
-      return allow(); // Skip if country not provided
+      return skip({ 
+        reason: 'Country not provided, skipping country-specific check',
+        meta: { skippedReason: 'missing_country' }
+      });
     }
     
     // Country-specific age requirements
@@ -57,9 +60,15 @@ const countryAgeRule = defineRule(
     
     const requiredAge = requirements[input.country] || 18;
     if (input.age >= requiredAge) {
-      return allow({ reason: `User meets ${input.country} age requirement` });
+      return allow({ 
+        reason: `User meets ${input.country} age requirement`,
+        meta: { country: input.country, requiredAge, providedAge: input.age }
+      });
     }
-    return deny({ reason: `User must be ${requiredAge} or older in ${input.country}` });
+    return deny({ 
+      reason: `User must be ${requiredAge} or older in ${input.country}`,
+      meta: { country: input.country, requiredAge, providedAge: input.age }
+    });
   }
 );
 

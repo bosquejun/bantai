@@ -198,12 +198,16 @@ const result = await evaluatePolicy(
 Helper function to create an allow result.
 
 ```typescript
-function allow({ reason }: { reason?: string | null } = { reason: null }): RuleResult
+function allow<TMeta extends Record<string, unknown>>({
+  reason?: string | null;
+  meta?: TMeta;
+} = { reason: null }): RuleResult
 ```
 
 **Parameters:**
 
 - `reason?`: Optional reason message (default: `null`)
+- `meta?`: Optional metadata record for additional context (default: `undefined`)
 
 **Returns:** `RuleResult` with `allowed: true`
 
@@ -212,6 +216,12 @@ function allow({ reason }: { reason?: string | null } = { reason: null }): RuleR
 ```typescript
 return allow({ reason: 'User is valid' });
 return allow(); // reason defaults to null
+
+// With metadata
+return allow({
+  reason: 'User is valid',
+  meta: { userId: '123', role: 'admin' }
+});
 ```
 
 ---
@@ -221,12 +231,16 @@ return allow(); // reason defaults to null
 Helper function to create a deny result.
 
 ```typescript
-function deny({ reason }: { reason?: string | null } = { reason: null }): RuleResult
+function deny<TMeta extends Record<string, unknown>>({
+  reason?: string | null;
+  meta?: TMeta;
+} = { reason: null }): RuleResult
 ```
 
 **Parameters:**
 
 - `reason?`: Optional reason message (default: `null`)
+- `meta?`: Optional metadata record for additional context (default: `undefined`)
 
 **Returns:** `RuleResult` with `allowed: false`
 
@@ -235,7 +249,51 @@ function deny({ reason }: { reason?: string | null } = { reason: null }): RuleRe
 ```typescript
 return deny({ reason: 'User is invalid' });
 return deny(); // reason defaults to null
+
+// With metadata
+return deny({
+  reason: 'User is invalid',
+  meta: { errorCode: 'INVALID_USER', attempts: 3 }
+});
 ```
+
+---
+
+## `skip`
+
+Helper function to create a skip result. A skipped rule is treated as allowed but doesn't contribute to the policy decision.
+
+```typescript
+function skip<TMeta extends Record<string, unknown>>({
+  reason?: string | null;
+  meta?: TMeta;
+} = { reason: 'skipped' }): RuleResult
+```
+
+**Parameters:**
+
+- `reason?`: Optional reason message (default: `'skipped'`)
+- `meta?`: Optional metadata record for additional context (default: `undefined`)
+
+**Returns:** `RuleResult` with `allowed: true` and `skipped: true`
+
+**Example:**
+
+```typescript
+return skip({ reason: 'Rule not applicable' });
+return skip(); // reason defaults to 'skipped'
+
+// With metadata
+return skip({
+  reason: 'Rule not applicable',
+  meta: { condition: 'country_not_provided' }
+});
+```
+
+**Use cases:**
+- When a rule doesn't apply to the current input
+- When a rule should be bypassed under certain conditions
+- For conditional rule evaluation
 
 ## Related Documentation
 

@@ -38,6 +38,28 @@ const rateLimitedContext = withRateLimit(baseContext, {
 });
 ```
 
+### [Audit Logging](/docs/extensions/with-audit)
+
+Add comprehensive audit logging capabilities to your Bantai contexts:
+
+- **Automatic Event Tracking**: Automatically tracks policy evaluations and rule decisions
+- **Multiple Event Types**: Policy start/end, rule start/decision/end, and custom events
+- **Multiple Sinks**: Send events to multiple destinations (console, database, logging services)
+- **Trace Correlation**: Support for trace IDs and request IDs for distributed tracing
+
+Perfect for compliance, debugging, and observability.
+
+```typescript
+import { withAudit } from '@bantai-dev/with-audit';
+
+const contextWithAudit = withAudit(baseContext, {
+  sinks: [
+    (event) => console.log('Audit:', event),
+    async (event) => await db.auditEvents.insert(event),
+  ],
+});
+```
+
 ### [Storage](/docs/extensions/with-storage)
 
 Add storage capabilities to your contexts for persistent data access:
@@ -107,19 +129,26 @@ const redisStorage = createRedisStorage(
 
 // 3. Apply extensions (order matters - rate limit needs storage)
 const storageContext = withStorage(apiContext, redisStorage);
-const enhancedContext = withRateLimit(storageContext, {
+const rateLimitContext = withRateLimit(storageContext, {
   storage: redisStorage,
   generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+});
+const enhancedContext = withAudit(rateLimitContext, {
+  sinks: [
+    (event) => console.log('Audit:', event),
+    async (event) => await db.auditEvents.insert(event),
+  ],
 });
 
 // 4. Use in rules
 const rule = defineRule(enhancedContext, 'api-rule', async (input, { tools }) => {
-  // Access both storage and rateLimit tools
+  // Access storage, rateLimit, and audit tools
   const cached = await tools.storage.get(`cache:${input.userId}`);
   const rateLimitResult = await tools.rateLimit.checkRateLimit(
     tools.storage,
     { key: `api:${input.userId}`, type: 'fixed-window', limit: 100, period: '1h' }
   );
+  // Audit events are automatically emitted during policy evaluation
   // ...
 });
 ```
@@ -138,6 +167,7 @@ All extensions share a common architecture:
 Use extensions when you need:
 
 - **Rate Limiting**: Control request rates, API quotas, or usage limits
+- **Audit Logging**: Track policy evaluations, rule decisions, and custom events for compliance and observability
 - **Storage**: Cache data, persist state, or access external storage
 - **Custom Tools**: Add domain-specific utilities to your rules
 
@@ -151,6 +181,9 @@ Each extension is a separate package:
 # Rate limiting
 npm install @bantai-dev/with-rate-limit @bantai-dev/with-storage
 
+# Audit logging
+npm install @bantai-dev/with-audit
+
 # Storage
 npm install @bantai-dev/with-storage
 
@@ -161,6 +194,7 @@ npm install @bantai-dev/storage-redis
 ## Next Steps
 
 - **[Rate Limiting Extension](/docs/extensions/with-rate-limit)** - Learn about rate limiting
+- **[Audit Extension](/docs/extensions/with-audit)** - Learn about audit logging
 - **[Storage Extension](/docs/extensions/with-storage)** - Learn about storage adapters
 - **[Redis Storage](/docs/storage/storage-redis)** - Production Redis integration
 - **[Examples](/docs/examples)** - See extensions in action

@@ -40,9 +40,15 @@ const evaluate: RuleEvaluateFnAsync<
 > = async (input, { tools }) => {
   tools.logger.log(`Checking user ${input.userId}`);
   if (input.age >= 18) {
-    return allow({ reason: 'User is of legal age' });
+    return allow({ 
+      reason: 'User is of legal age',
+      meta: { verifiedAge: input.age, userId: input.userId }
+    });
   }
-  return deny({ reason: 'User must be 18 or older' });
+  return deny({ 
+    reason: 'User must be 18 or older',
+    meta: { providedAge: input.age, requiredAge: 18 }
+  });
 };
 ```
 

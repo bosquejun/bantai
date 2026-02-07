@@ -2,6 +2,7 @@
     "title": "Extensions",
     "pages": [
         "with-rate-limit",
+        "with-audit",
         "storage"
     ]
   }

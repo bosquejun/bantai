@@ -28,19 +28,25 @@ const ageContext = defineContext(
 
 ### Step 2: Create a Rule
 
-Rules are the building blocks that make decisions. They evaluate input and return `allow()` or `deny()`:
+Rules are the building blocks that make decisions. They evaluate input and return `allow()`, `deny()`, or `skip()`:
 
 ```typescript
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny, skip } from '@bantai-dev/core';
 
 const ageVerificationRule = defineRule(
   ageContext,
   'age-verification',
   async (input) => {
     if (input.age >= 18) {
-      return allow({ reason: 'User is of legal age' });
+      return allow({ 
+        reason: 'User is of legal age',
+        meta: { verifiedAge: input.age }
+      });
     }
-    return deny({ reason: 'User must be 18 or older' });
+    return deny({ 
+      reason: 'User must be 18 or older',
+      meta: { providedAge: input.age, requiredAge: 18 }
+    });
   }
 );
 ```
@@ -106,9 +112,15 @@ const ageVerificationRule = defineRule(
   'age-verification',
   async (input) => {
     if (input.age >= 18) {
-      return allow({ reason: 'User is of legal age' });
+      return allow({ 
+        reason: 'User is of legal age',
+        meta: { verifiedAge: input.age }
+      });
     }
-    return deny({ reason: 'User must be 18 or older' });
+    return deny({ 
+      reason: 'User must be 18 or older',
+      meta: { providedAge: input.age, requiredAge: 18 }
+    });
   }
 );
 
@@ -137,7 +149,7 @@ if (result.decision === 'allow') {
 The Bantai workflow follows these five phases:
 
 1. **Define Context** - Use `defineContext()` to establish your schema requirements
-2. **Craft Rules** - Write individual validation rules that return typed `allow()` or `deny()` responses
+2. **Craft Rules** - Write individual validation rules that return typed `allow()`, `deny()`, or `skip()` responses with optional metadata
 3. **Compose Policies** - Group multiple rules into a single policy with custom evaluation strategies
 4. **Execute Evaluation** - Trigger `evaluatePolicy()` with real-time data to get an instant decision
 5. **Handle Results** - Utilize `decision` and `violatedRules` arrays to power your application's logic

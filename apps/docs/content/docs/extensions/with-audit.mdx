@@ -1,19 +1,16 @@
-# @bantai-dev/with-audit
+---
+title: Audit Extension
+description: Add audit logging capabilities to your Bantai contexts
+---
 
-> Audit extension for @bantai-dev/core
+# Audit Extension
 
-Add audit logging capabilities to your Bantai contexts. This package provides audit event tracking and sinks for policy evaluations, rule decisions, and custom events.
-
-**Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
+The `@bantai-dev/with-audit` package adds comprehensive audit logging capabilities to your Bantai contexts. It automatically tracks policy evaluations, rule decisions, and custom events, providing full observability into your authorization system.
 
 ## Installation
 
-```bash
-npm install @bantai-dev/with-audit @bantai-dev/core zod
-# or
-pnpm add @bantai-dev/with-audit @bantai-dev/core zod
-# or
-yarn add @bantai-dev/with-audit @bantai-dev/core zod
+```package-install
+@bantai-dev/with-audit @bantai-dev/core zod
 ```
 
 **Note**: `@bantai-dev/core` and `zod` are peer dependencies and must be installed separately.
@@ -85,27 +82,139 @@ All events are automatically enriched with:
 - `id` - Unique event ID
 - `timestamp` - Unix timestamp in milliseconds
 
+## Event Types
+
+### Policy Events
+
+**`policy.start`** - Emitted when policy evaluation begins.
+
+```typescript
+{
+  type: 'policy.start',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
+**`policy.decision`** - Emitted when the final policy decision is made.
+
+```typescript
+{
+  type: 'policy.decision',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  decision: {
+    outcome: 'allow' | 'deny',
+    reason: string,
+  },
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
+**`policy.end`** - Emitted when policy evaluation completes.
+
+```typescript
+{
+  type: 'policy.end',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
+### Rule Events
+
+**`rule.start`** - Emitted when a rule evaluation begins.
+
+```typescript
+{
+  type: 'rule.start',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  rule: { name: string },
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
+**`rule.decision`** - Emitted when a rule makes a decision.
+
+```typescript
+{
+  type: 'rule.decision',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  rule: { name: string },
+  decision: {
+    outcome: 'allow' | 'deny' | 'skip',
+    reason: string | null,
+  },
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
+**`rule.end`** - Emitted when a rule evaluation completes.
+
+```typescript
+{
+  type: 'rule.end',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  rule: { name: string },
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
+### Custom Events
+
+**`extension.event`** - Custom events that you can emit manually.
+
+```typescript
+{
+  type: 'extension.event',
+  evaluationId: string,
+  policy: { name: string, version?: string },
+  meta?: Record<string, unknown>,
+  trace?: { traceId?: string, requestId?: string },
+}
+```
+
 ## API Reference
 
-### `withAudit(context, options)`
+### `withAudit`
 
-Extends a Bantai context with audit capabilities.
+Extends a Bantai context with audit capabilities. Adds audit tools to the context and extends the schema with optional trace fields.
+
+```typescript
+function withAudit<
+  TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>
+>(
+  context: TContext,
+  options: {
+    sinks: AuditSink[];
+  }
+): WithAuditContext<TContext>
+```
 
 **Parameters:**
+
 - `context`: A Bantai context definition
 - `options`: Configuration object
   - `sinks`: Array of `AuditSink` functions that receive audit events
 
 **Returns:** Extended context with audit tools in `context.tools.audit`
 
-**Type Signature:**
+**Example:**
+
 ```typescript
-function withAudit<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>>(
-  context: TContext,
-  options: {
-    sinks: AuditSink[];
-  }
-): WithAuditContext<TContext>;
+const contextWithAudit = withAudit(baseContext, {
+  sinks: [
+    (event) => console.log('Audit:', event),
+    async (event) => {
+      await db.auditEvents.insert(event);
+    },
+  ],
+});
 ```
 
 ### AuditSink
@@ -116,9 +225,11 @@ An audit sink is a function that receives validated audit events:
 type AuditSink = (event: AuditEvent) => void;
 ```
 
+Sinks can be synchronous or asynchronous. If a sink throws an error, it will stop the execution of subsequent sinks in the array.
+
 ### AuditEvent
 
-The audit event structure:
+The complete audit event structure:
 
 ```typescript
 type AuditEvent = {
@@ -143,6 +254,35 @@ type AuditEvent = {
   };
   meta?: Record<string, unknown>;
 };
+```
+
+## Context Schema Extension
+
+When you use `withAudit`, the context schema is automatically extended with:
+
+```typescript
+{
+  audit?: {
+    trace?: {
+      traceId?: string;
+      requestId?: string;
+    };
+  };
+}
+```
+
+This allows you to pass trace information when evaluating policies:
+
+```typescript
+await evaluatePolicy(policy, {
+  userId: '123',
+  audit: {
+    trace: {
+      traceId: 'trace-123',
+      requestId: 'req-456',
+    },
+  },
+});
 ```
 
 ## Examples
@@ -210,38 +350,6 @@ const context = withAudit(
     ],
   }
 );
-```
-
-### Custom Audit Events
-
-You can emit custom audit events using the audit handler:
-
-```typescript
-import { defineContext, definePolicy, evaluatePolicy } from '@bantai-dev/core';
-import { withAudit } from '@bantai-dev/with-audit';
-
-const context = withAudit(
-  defineContext(z.object({ userId: z.string() })),
-  {
-    sinks: [(event) => console.log(event)],
-  }
-);
-
-const policy = definePolicy(context, 'my-policy', []);
-
-// Get audit handler for custom events
-const auditHandler = context.tools.audit.createAuditPolicy(policy);
-
-// Emit custom events
-auditHandler.emit({
-  type: 'extension.event',
-  meta: {
-    customField: 'custom-value',
-    action: 'user-login',
-  },
-});
-
-// Note: After policy.end is emitted, the handler cannot emit more events
 ```
 
 ### Database Storage
@@ -316,141 +424,39 @@ const context = withAudit(
 );
 ```
 
-## Context Schema Extension
+### Custom Audit Events
 
-When you use `withAudit`, the context schema is automatically extended with:
-
-```typescript
-{
-  audit?: {
-    trace?: {
-      traceId?: string;
-      requestId?: string;
-    };
-  };
-}
-```
-
-This allows you to pass trace information when evaluating policies:
+You can emit custom audit events using the audit handler:
 
 ```typescript
-await evaluatePolicy(policy, {
-  userId: '123',
-  audit: {
-    trace: {
-      traceId: 'trace-123',
-      requestId: 'req-456',
-    },
+import { defineContext, definePolicy, evaluatePolicy } from '@bantai-dev/core';
+import { withAudit } from '@bantai-dev/with-audit';
+
+const context = withAudit(
+  defineContext(z.object({ userId: z.string() })),
+  {
+    sinks: [(event) => console.log(event)],
+  }
+);
+
+const policy = definePolicy(context, 'my-policy', []);
+
+// Get audit handler for custom events
+const auditHandler = context.tools.audit.createAuditPolicy(policy);
+
+// Emit custom events
+auditHandler.emit({
+  type: 'extension.event',
+  meta: {
+    customField: 'custom-value',
+    action: 'user-login',
   },
 });
+
+// Note: After policy.end is emitted, the handler cannot emit more events
 ```
 
-## Event Types
-
-### `policy.start`
-
-Emitted when policy evaluation begins.
-
-```typescript
-{
-  type: 'policy.start',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-### `rule.start`
-
-Emitted when a rule evaluation begins.
-
-```typescript
-{
-  type: 'rule.start',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  rule: { name: string },
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-### `rule.decision`
-
-Emitted when a rule makes a decision.
-
-```typescript
-{
-  type: 'rule.decision',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  rule: { name: string },
-  decision: {
-    outcome: 'allow' | 'deny' | 'skip',
-    reason: string | null,
-  },
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-### `rule.end`
-
-Emitted when a rule evaluation completes.
-
-```typescript
-{
-  type: 'rule.end',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  rule: { name: string },
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-### `policy.decision`
-
-Emitted when the final policy decision is made.
-
-```typescript
-{
-  type: 'policy.decision',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  decision: {
-    outcome: 'allow' | 'deny',
-    reason: string,
-  },
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-### `policy.end`
-
-Emitted when policy evaluation completes.
-
-```typescript
-{
-  type: 'policy.end',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-### `extension.event`
-
-Custom events that you can emit manually.
-
-```typescript
-{
-  type: 'extension.event',
-  evaluationId: string,
-  policy: { name: string, version?: string },
-  meta?: Record<string, unknown>,
-  trace?: { traceId?: string, requestId?: string },
-}
-```
-
-## Integration with Other Packages
+## Integration with Other Extensions
 
 ### With Rate Limiting
 
@@ -470,14 +476,6 @@ const context = withAudit(
 );
 ```
 
-## Type Safety
-
-The package provides full TypeScript type safety:
-
-- **Context extension**: Type-safe context merging with audit tools
-- **Event validation**: All events are validated against the audit event schema
-- **Schema extension**: Type-safe audit trace fields in context input
-
 ## Best Practices
 
 1. **Use multiple sinks**: Separate concerns by using different sinks for different purposes (logging, storage, alerting)
@@ -490,6 +488,14 @@ The package provides full TypeScript type safety:
 
 5. **Async sinks**: Use async sinks for database operations, but be aware that errors won't stop other sinks
 
+## Type Safety
+
+The package provides full TypeScript type safety:
+
+- **Context extension**: Type-safe context merging with audit tools
+- **Event validation**: All events are validated against the audit event schema
+- **Schema extension**: Type-safe audit trace fields in context input
+
 ## Requirements
 
 - Node.js >= 18
@@ -497,12 +503,9 @@ The package provides full TypeScript type safety:
 - Zod >= 4.3.5
 - @bantai-dev/core
 
-## Links
+## Related Documentation
 
-- **Website**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
-- **GitHub Repository**: [https://github.com/bosquejun/bantai](https://github.com/bosquejun/bantai)
-- **npm Package**: [https://www.npmjs.com/package/@bantai-dev/with-audit](https://www.npmjs.com/package/@bantai-dev/with-audit)
+- **[Core Concepts](/docs/concepts)** - Understand contexts, rules, and policies
+- **[Rate Limiting Extension](/docs/extensions/with-rate-limit)** - Combine with rate limiting
+- **[Examples](/docs/examples)** - See audit logging in action
 
-## License
-
-MIT
