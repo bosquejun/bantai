@@ -57,6 +57,8 @@
   },
   "dependencies": {
     "@bantai-dev/core": "workspace:*",
+    "@bantai-dev/with-storage": "workspace:*",
+    "@bantai-dev/with-rate-limit": "workspace:*",
     "openai": "^6.17.0",
     "zod": "^4.3.5"
   },
