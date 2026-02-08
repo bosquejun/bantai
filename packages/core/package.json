@@ -1,6 +1,6 @@
 {
   "name": "@bantai-dev/core",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "TypeScript-first policy evaluation library for rule-based validation and decision-making",
   "type": "module",
   "main": "./dist/index.js",

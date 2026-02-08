@@ -1,6 +1,6 @@
 {
   "name": "@bantai-dev/with-audit",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Audit extension for @bantai-dev/core",
   "type": "module",
   "main": "./dist/index.js",

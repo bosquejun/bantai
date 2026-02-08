@@ -8,7 +8,8 @@
       "@bantai-dev/with-rate-limit",
       "@bantai-dev/with-storage", 
       "@bantai-dev/with-audit", 
-      "@bantai-dev/storage-redis"
+      "@bantai-dev/storage-redis",
+      "@bantai-dev/shared"
     ]
   ],
   "linked": [],
