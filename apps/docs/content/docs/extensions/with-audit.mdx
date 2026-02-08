@@ -217,6 +217,63 @@ const contextWithAudit = withAudit(baseContext, {
 });
 ```
 
+### AuditTool
+
+The audit tool provides methods for creating and emitting audit events:
+
+```typescript
+type AuditTool<TContext, TName, TRules> = {
+  createAuditEvent: (
+    policy: PolicyDefinition<TContext, TName, TRules>,
+    evaluationId: string
+  ) => AuditHandler;
+};
+```
+
+**`createAuditEvent(policy, evaluationId)`**
+
+Creates an audit handler for a specific policy evaluation. Returns an `AuditHandler` that can emit events.
+
+**Parameters:**
+- `policy`: The policy definition for this evaluation
+- `evaluationId`: Unique identifier for this policy evaluation
+
+**Returns:** `AuditHandler` with an `emit` method
+
+**Example:**
+```typescript
+import { generateId } from '@bantai-dev/shared';
+
+const evaluationId = generateId('eval');
+const handler = context.tools.audit.createAuditEvent(policy, evaluationId);
+
+handler.emit({
+  type: 'extension.event',
+  meta: { customData: 'value' },
+});
+```
+
+### AuditHandler
+
+An audit handler is returned by `createAuditEvent` and provides an `emit` method:
+
+```typescript
+type AuditHandler = {
+  emit: (event: Omit<AuditEvent, "evaluationId" | "policy" | "id" | "timestamp">) => string;
+};
+```
+
+**`emit(event)`**
+
+Emits an audit event. The event is automatically enriched with `evaluationId`, `policy`, `id`, and `timestamp`.
+
+**Parameters:**
+- `event`: Partial audit event (without auto-generated fields)
+
+**Returns:** The generated event ID (`event:${string}`)
+
+**Note:** After emitting `policy.end`, the handler cannot emit more events and will throw an error.
+
 ### AuditSink
 
 An audit sink is a function that receives validated audit events:
@@ -233,16 +290,19 @@ The complete audit event structure:
 
 ```typescript
 type AuditEvent = {
-  id: string;                    // Unique event ID
+  id: `event:${string}`;         // Unique event ID (prefixed with "event:")
   type: 'policy.start' | 'rule.start' | 'rule.decision' | 'rule.end' | 'policy.decision' | 'policy.end' | 'extension.event';
   timestamp: number;              // Unix timestamp in ms
-  evaluationId: string;          // Unique per policy evaluation
+  evaluationId: string;           // Unique per policy evaluation
   policy: {
     name: string;
     version?: string;
+    id: string;                   // Policy ID
   };
   rule?: {
     name: string;
+    version?: string;
+    id: string;                   // Rule ID
   };
   decision?: {
     outcome: 'allow' | 'deny' | 'skip';
@@ -252,9 +312,14 @@ type AuditEvent = {
     traceId?: string;
     requestId?: string;
   };
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown>; // Extension-owned data
+  auditVersion: string;           // Audit schema version
+  durationMs?: number | null;      // Duration in milliseconds (for timing events)
+  parentId?: string;              // Parent event ID (for event hierarchies)
 };
 ```
+
+**Note:** All fields except `id`, `timestamp`, `evaluationId`, `policy`, and `auditVersion` are optional and depend on the event type.
 
 ## Context Schema Extension
 
@@ -429,7 +494,8 @@ const context = withAudit(
 You can emit custom audit events using the audit handler:
 
 ```typescript
-import { defineContext, definePolicy, evaluatePolicy } from '@bantai-dev/core';
+import { defineContext, definePolicy } from '@bantai-dev/core';
+import { generateId } from '@bantai-dev/shared';
 import { withAudit } from '@bantai-dev/with-audit';
 
 const context = withAudit(
@@ -442,7 +508,9 @@ const context = withAudit(
 const policy = definePolicy(context, 'my-policy', []);
 
 // Get audit handler for custom events
-const auditHandler = context.tools.audit.createAuditPolicy(policy);
+// You need to provide a policy and evaluationId
+const evaluationId = generateId('eval');
+const auditHandler = context.tools.audit.createAuditEvent(policy, evaluationId);
 
 // Emit custom events
 auditHandler.emit({
@@ -498,10 +566,11 @@ The package provides full TypeScript type safety:
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - @bantai-dev/core
+- @bantai-dev/shared
 
 ## Related Documentation
 

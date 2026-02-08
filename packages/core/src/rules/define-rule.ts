@@ -1,8 +1,8 @@
+import { normalizeId } from "@bantai-dev/shared";
 import { z } from "zod";
 import { ContextDefinition } from "../context/define-context.js";
 import { RuleResult } from "./results.js";
 import { ruleEvaluateFnSchema, ruleHookFnSchema, ruleSchema } from "./schema.js";
-
 
 export type RuleFnContextArgs<TTools extends Record<string, unknown> = {}> = {
   tools: TTools;
@@ -58,6 +58,7 @@ export function defineRule<
 
     const rule = ruleSchema.parse({
         name,
+        id: `rule:${normalizeId(name)}`,
         evaluate: evalFnSchema.implementAsync(wrappedEvaluate as unknown as Parameters<typeof evalFnSchema.implementAsync>[0]),
         hooks: {
           onAllow: hooks?.onAllow ? hooksSchema.implementAsync(wrappedHook(hooks.onAllow) as unknown as Parameters<typeof hooksSchema.implementAsync>[0]) : undefined,

@@ -1,3 +1,4 @@
+import { normalizeId } from "@bantai-dev/shared";
 import { z } from "zod";
 import { ContextDefinition } from "../context/define-context.js";
 import { RuleDefinition } from "../rules/define-rule.js";
@@ -56,6 +57,7 @@ export function definePolicy<
     }
     const policy = policySchema.parse({
         name,
+        id: `policy:${normalizeId(name)}`,
         rules: rulesMap,
         context,
         options:{

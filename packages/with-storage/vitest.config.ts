@@ -12,6 +12,7 @@ export default defineConfig({
         singleThread: true,
       },
     },
+    passWithNoTests: true,
   },
   resolve: {
     alias: {

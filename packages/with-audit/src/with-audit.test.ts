@@ -1,4 +1,5 @@
 import { defineContext, type AuditEvent } from '@bantai-dev/core';
+import { generateId } from '@bantai-dev/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { withAudit } from './with-audit.js';
@@ -7,7 +8,8 @@ import { withAudit } from './with-audit.js';
 function createMockPolicy(context: ReturnType<typeof defineContext>) {
   return {
     name: 'test-policy',
-    version: '1.0.0',
+    id: 'policy:test-policy' as const,
+    version: 'v1' as const,
     context,
     rules: new Map(),
     options: {
@@ -32,8 +34,8 @@ describe('withAudit', () => {
     expect(context.schema.shape.userId).toBeDefined();
     expect(context.schema.shape.audit).toBeDefined();
     expect(context.tools).toHaveProperty('audit');
-    expect(context.tools.audit).toHaveProperty('createAuditPolicy');
-    expect(typeof context.tools.audit.createAuditPolicy).toBe('function');
+    expect(context.tools.audit).toHaveProperty('createAuditEvent');
+    expect(typeof context.tools.audit.createAuditEvent).toBe('function');
   });
 
   it('should call all sinks when audit handler emits events', () => {
@@ -52,7 +54,8 @@ describe('withAudit', () => {
     });
 
     const mockPolicy = createMockPolicy(context);
-    const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+    const evaluationId = generateId('eval');
+    const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
 
     auditHandler.emit({
       type: 'policy.start',
@@ -70,9 +73,11 @@ describe('withAudit', () => {
     expect(calledEvent).toHaveProperty('type', 'policy.start');
     expect(calledEvent).toHaveProperty('timestamp');
     expect(calledEvent).toHaveProperty('evaluationId');
-    expect(calledEvent).toHaveProperty('policy', {
+    expect(calledEvent).toHaveProperty('policy');
+    expect(calledEvent?.policy).toMatchObject({
       name: 'test-policy',
-      version: '1.0.0',
+      version: 'v1',
+      id: 'policy:test-policy',
     });
   });
 
@@ -150,11 +155,12 @@ describe('withAudit', () => {
     const context = withAudit(baseContext, { sinks: [] });
 
     expect(context.tools.audit).toBeDefined();
-    expect(context.tools.audit.createAuditPolicy).toBeDefined();
+    expect(context.tools.audit.createAuditEvent).toBeDefined();
 
     // Should not throw when called with empty sinks
     const mockPolicy = createMockPolicy(context);
-    const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+    const evaluationId = generateId('eval');
+    const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
 
     expect(() => auditHandler.emit({ type: 'policy.start' })).not.toThrow();
   });
@@ -171,19 +177,23 @@ describe('withAudit', () => {
 
     const mockPolicy = {
       name: 'complex-policy',
-      version: '2.0.0',
+      id: 'policy:complex-policy' as const,
+      version: 'v1' as const,
       context,
       rules: new Map(),
       options: {
         defaultStrategy: 'preemptive' as const,
       },
     } as any; // Type assertion needed because PolicyDefinition has zod brand properties
-    const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+    const evaluationId = generateId('eval');
+    const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
 
     auditHandler.emit({
       type: 'rule.decision',
       rule: {
         name: 'test-rule',
+        id: 'rule:test-rule' as const,
+        version: 'v1' as const,
       },
       decision: {
         outcome: 'allow',
@@ -205,7 +215,11 @@ describe('withAudit', () => {
     const calledEvent = sink1.mock.calls[0]?.[0];
     expect(calledEvent).toBeDefined();
     expect(calledEvent?.type).toBe('rule.decision');
-    expect(calledEvent?.rule).toEqual({ name: 'test-rule' });
+    expect(calledEvent?.rule).toMatchObject({ 
+      name: 'test-rule',
+      id: 'rule:test-rule',
+      version: 'v1',
+    });
     expect(calledEvent?.decision).toEqual({
       outcome: 'allow',
       reason: 'User meets requirements',
@@ -234,7 +248,8 @@ describe('withAudit', () => {
     const context = withAudit(baseContext, { sinks: [sink1, sink2] });
 
     const mockPolicy = createMockPolicy(context);
-    const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+    const evaluationId = generateId('eval');
+    const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
 
     auditHandler.emit({ type: 'policy.start' });
     auditHandler.emit({ type: 'policy.end' });
@@ -268,7 +283,8 @@ describe('withAudit', () => {
     const context = withAudit(baseContext, { sinks: [sink1, sink2] });
 
     const mockPolicy = createMockPolicy(context);
-    const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+    const evaluationId = generateId('eval');
+    const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
 
     // First sink throws, but second should still be called
     expect(() => auditHandler.emit({ type: 'policy.start' })).toThrow('Sink error');
@@ -298,7 +314,8 @@ describe('withAudit', () => {
 
     // Type check: context should have audit tool
     const mockPolicy = createMockPolicy(context);
-    const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+    const evaluationId = generateId('eval');
+    const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
 
     // This should compile without errors
     auditHandler.emit({ type: 'policy.start' });
@@ -319,7 +336,8 @@ describe('withAudit', () => {
 
     expect(context.tools).toEqual({
       audit: {
-        createAuditPolicy: expect.any(Function),
+        createAuditEvent: expect.any(Function),
+        emit: expect.any(Function),
       },
     });
   });
@@ -338,14 +356,16 @@ describe('withAudit', () => {
       'policy.start',
       'rule.decision',
       'policy.decision',
-      'policy.end',
       'extension.event',
+      'policy.end',
     ];
 
     // Create a new handler for each event type since policy.end ends the handler
+    // Note: policy.end must be last as it ends the handler
     eventTypes.forEach((type) => {
       const mockPolicy = createMockPolicy(context);
-      const auditHandler = context.tools.audit.createAuditPolicy(mockPolicy);
+      const evaluationId = generateId('eval');
+      const auditHandler = context.tools.audit.createAuditEvent(mockPolicy, evaluationId);
       auditHandler.emit({ type });
     });
 

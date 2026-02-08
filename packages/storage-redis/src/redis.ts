@@ -160,6 +160,11 @@ export function createRedisStorage<T extends z.ZodType>(
     },
 
     // -------------------------------------------------------------------
+    async append(key: string, value: z.infer<T>): Promise<void> {
+      await redisClient.append(fullKey(key), serialize(value));
+    },
+
+    // -------------------------------------------------------------------
     // Atomic update – uses a distributed lock (SET NX) + Lua to keep the
     // read-modify-write cycle free of TOCTOU races.
     // -------------------------------------------------------------------
@@ -244,4 +249,5 @@ export function createRedisStorage<T extends z.ZodType>(
       return shouldWrite ? (res.value as z.infer<T>) : current
     },
   }
+
 }

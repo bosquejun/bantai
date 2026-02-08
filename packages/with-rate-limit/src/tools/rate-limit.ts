@@ -1,4 +1,5 @@
-import { StorageAdapter } from "@/storage.js";
+
+import { StorageAdapter } from "@bantai-dev/with-storage";
 import { z } from "zod";
 import { checkRateLimit, incrementRateLimit } from "./rate-limit-helpers.js";
 

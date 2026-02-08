@@ -1,5 +1,5 @@
+import { StorageAdapter } from '@bantai-dev/with-storage';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { StorageAdapter } from '../storage.js';
 import {
   checkRateLimit,
   incrementRateLimit,
@@ -32,6 +32,10 @@ function createMockStorage<T>(): StorageAdapter<T> {
     async delete(key: string): Promise<void> {
       store.delete(key);
       ttlStore.delete(key);
+    },
+
+    async append(key: string, value: T): Promise<void> {
+      this.set(key, value);
     },
 
     async update(key: string, updater: (current: T | undefined) => { value: T; ttlMs?: number } | null): Promise<T | undefined> {

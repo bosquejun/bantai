@@ -33,10 +33,13 @@ export function withAudit<TContext extends ContextDefinition<z.ZodRawShape, Reco
 
   const mergedSchema = context.schema.extend(auditSchema.shape);
 
+  const auditHandler = createWithAuditHandler(combinedSinks);
+
   const tools: WithAuditTools<TContext> = {
     ...(context.tools as ExtractContextTools<TContext>),
     audit: {
-      createAuditPolicy: (policy) => createWithAuditHandler(policy,combinedSinks)
+      createAuditEvent: (policy, evaluationId) => auditHandler.init(policy, evaluationId),
+      emit: auditHandler.emit,
     }
   };
 

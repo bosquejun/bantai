@@ -322,10 +322,10 @@ const context = withStorage(
 The storage plugin is used by `@bantai-dev/with-rate-limit` to store rate limit counters:
 
 ```typescript
-import { withRateLimit } from '@bantai-dev/with-rate-limit';
-import { createMemoryStorage, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
 
-const storage = createMemoryStorage(rateLimitSchema);
+const storage = createMemoryStorage(rateLimit.storageSchema);
 const context = withRateLimit(baseContext, { storage });
 ```
 
@@ -355,7 +355,7 @@ The package provides full TypeScript type safety:
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - @bantai-dev/core

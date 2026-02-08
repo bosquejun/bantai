@@ -20,11 +20,11 @@ The `@bantai-dev/with-rate-limit` package adds rate limiting capabilities to you
 ```typescript
 import { z } from 'zod';
 import { defineContext, definePolicy, evaluatePolicy, allow } from '@bantai-dev/core';
+import { createMemoryStorage } from '@bantai-dev/with-storage';
 import {
   withRateLimit,
   defineRateLimitRule,
-  createMemoryStorage,
-  rateLimitSchema,
+  rateLimit,
 } from '@bantai-dev/with-rate-limit';
 
 // 1. Define your base context
@@ -38,7 +38,7 @@ const apiContext = defineContext(
 // 2. Extend context with rate limiting
 // generateKey will automatically create keys from your input
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimitSchema),
+  storage: createMemoryStorage(rateLimit.storageSchema),
   generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
   defaultValues: {
     rateLimit: {
@@ -57,6 +57,8 @@ const rateLimitRule = defineRateLimitRule(
   async (input) => {
     // Your business logic here
     // Rate limit is already checked and will be incremented on allow
+    // input.currentLimit contains the rate limit check result
+    console.log(`Remaining: ${input.currentLimit.remaining}`);
     return allow({ reason: 'Request allowed' });
   },
   {
@@ -170,8 +172,11 @@ function withRateLimit<
 **Example with generateKey:**
 
 ```typescript
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
+
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimitSchema),
+  storage: createMemoryStorage(rateLimit.storageSchema),
   generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
   defaultValues: {
     rateLimit: {
@@ -197,7 +202,8 @@ function defineRateLimitRule<
   context: TContext,
   name: TName,
   evaluate: RuleEvaluateFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>,
-  options?: {
+  options: {
+    config: Partial<z.infer<typeof rateLimitSchema>['rateLimit']>;
     onAllow?: RuleHookFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>;
     onDeny?: RuleHookFnAsync<ExtractContextShape<TContext>, ExtractContextTools<TContext>>;
   }
@@ -208,10 +214,13 @@ function defineRateLimitRule<
 
 - `context`: A context extended with rate limiting capabilities via `withRateLimit`
 - `name`: Unique name for the rule
-- `evaluate`: Your rule evaluation function (rate limit is checked before this runs)
-- `options?`: Optional hooks
-  - `onAllow?`: Hook called after rate limit is incremented (if your rule allows)
-  - `onDeny?`: Hook called if your rule denies
+- `evaluate`: Your rule evaluation function. The function receives:
+  - `input`: The context input with an additional `currentLimit` property containing the rate limit check result
+  - `context`: The evaluation context with tools
+- `options`: Configuration object
+  - `config`: Rate limit configuration (required). This will be merged with any `rateLimit` config from the input.
+  - `onAllow?`: Optional hook called after rate limit is incremented (if your rule allows)
+  - `onDeny?`: Optional hook called if your rule denies
 
 **Returns:** `RuleDefinition<TContext, TName>`
 
@@ -219,7 +228,7 @@ function defineRateLimitRule<
 
 1. Checks the rate limit before evaluating your rule
 2. If rate limit is exceeded, returns `deny` immediately
-3. If rate limit passes, evaluates your rule
+3. If rate limit passes, evaluates your rule with `currentLimit` available in the input
 4. On allow, automatically increments the rate limit counter
 5. Calls your optional hooks
 
@@ -236,12 +245,19 @@ const rateLimitRule = defineRateLimitRule(
   rateLimitedContext,
   'api-rule',
   async (input) => {
+    // input.currentLimit contains the rate limit check result
+    console.log(`Remaining: ${input.currentLimit.remaining}`);
+    
     // Your business logic here
-    // Rate limit already checked and will be incremented on allow
     return allow({ reason: 'Request processed' });
   },
   {
-    onAllow: async (input) => {
+    config: {
+      limit: 100,
+      period: '1h',
+      type: 'fixed-window',
+    },
+    onAllow: async (result, input) => {
       // Optional: Additional logic after rate limit increment
       console.log(`Request allowed for ${input.userId}`);
     },
@@ -251,7 +267,7 @@ const rateLimitRule = defineRateLimitRule(
 
 ### `checkRateLimit`
 
-Checks if a rate limit would be exceeded without incrementing the counter. Use this in your rule's `evaluate` function.
+Checks if a rate limit would be exceeded without incrementing the counter. Use this in your rule's `evaluate` function when not using `defineRateLimitRule`.
 
 ```typescript
 async function checkRateLimit<TConfig extends RateLimitConfig>(
@@ -282,7 +298,7 @@ async function checkRateLimit<TConfig extends RateLimitConfig>(
 
 ### `incrementRateLimit`
 
-Increments the rate limit counter. Use this in your rule's `onAllow` hook.
+Increments the rate limit counter. Use this in your rule's `onAllow` hook when not using `defineRateLimitRule`.
 
 ```typescript
 async function incrementRateLimit(
@@ -300,27 +316,12 @@ async function incrementRateLimit(
 
 **Returns:** `Promise<void>`
 
-### `createMemoryStorage`
-
-Creates an in-memory storage adapter for development and testing. Not suitable for production use.
-
-```typescript
-function createMemoryStorage<T extends z.ZodType>(
-  schema: T
-): StorageAdapter<z.infer<T>>
-```
-
-**Parameters:**
-
-- `schema`: Zod schema for validating storage data
-
-**Returns:** `StorageAdapter<T>`
 
 ## Storage Integration
 
 The rate limiting extension requires a storage adapter. You can use:
 
-- **Memory storage** (development/testing): `createMemoryStorage` from this package
+- **Memory storage** (development/testing): `createMemoryStorage` from `@bantai-dev/with-storage`
 - **Redis storage** (production): `createRedisStorage` from `@bantai-dev/storage-redis`
 - **Custom storage**: Implement the `StorageAdapter` interface from `@bantai-dev/with-storage`
 
@@ -328,11 +329,11 @@ The rate limiting extension requires a storage adapter. You can use:
 
 ```typescript
 import { createRedisStorage } from '@bantai-dev/storage-redis';
-import { rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { rateLimit } from '@bantai-dev/with-rate-limit';
 
 const redisStorage = createRedisStorage(
   { url: process.env.REDIS_URL },
-  rateLimitSchema
+  rateLimit.storageSchema
 );
 
 const rateLimitedContext = withRateLimit(apiContext, {
@@ -347,9 +348,12 @@ const rateLimitedContext = withRateLimit(apiContext, {
 Using `defineRateLimitRule` with `generateKey`:
 
 ```typescript
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+import { rateLimit } from '@bantai-dev/with-rate-limit';
+
 // Extend context with per-user rate limiting
 const userRateLimitedContext = withRateLimit(userContext, {
-  storage: createMemoryStorage(rateLimitSchema),
+  storage: createMemoryStorage(rateLimit.storageSchema),
   generateKey: (input) => `user:${input.userId}`,
   defaultValues: {
     rateLimit: {
@@ -384,7 +388,7 @@ const endpointLimits = {
 
 // Extend context with endpoint-specific key generation
 const endpointRateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimitSchema),
+  storage: createMemoryStorage(rateLimit.storageSchema),
   generateKey: (input) => `endpoint:${input.endpoint}:${input.userId}`,
     defaultValues: {
       rateLimit: {
@@ -431,7 +435,7 @@ const tierLimits = {
 
   // Extend context with tier-based key generation
   const tierRateLimitedContext = withRateLimit(tierContext, {
-    storage: createMemoryStorage(rateLimitSchema),
+    storage: createMemoryStorage(rateLimit.storageSchema),
     generateKey: (input) => `tier:${input.userTier}:${input.userId}`,
     defaultValues: {
       rateLimit: {
@@ -476,7 +480,7 @@ The package provides full TypeScript type safety:
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - @bantai-dev/core

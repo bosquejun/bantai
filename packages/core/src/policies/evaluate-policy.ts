@@ -1,6 +1,7 @@
-import { AuditTool } from "src/audit/types.js";
-import { auditEventSchema } from "src/index.js";
+import { generateId } from "@bantai-dev/shared";
 import { z } from "zod";
+import { auditPolicyMetaSchema } from "../audit/schema.js";
+import { AuditEvent, AuditTool } from "../audit/types.js";
 import { ContextDefinition } from "../context/define-context.js";
 import { RuleDefinition } from "../rules/define-rule.js";
 import { RuleResult, deny } from "../rules/results.js";
@@ -42,21 +43,34 @@ export async function evaluatePolicy<
         ...(policy.context.defaultValues || {}),
         ...input,
     }
+
+
+    const evaluationId = generateId('eval');
+    
     const inputValue = policy.context.schema.parse(inputData) as z.infer<typeof policy.context.schema> & {
-        audit?: Partial<Pick<z.infer<typeof auditEventSchema>, 'trace'>>
+        audit?: Partial<Pick<AuditEvent, 'trace'>>
     }
 
     const ctx = { tools: policy.context.tools as { audit?:  AuditTool<TContext, TPolicy['name'], ExtractRuleFromPolicy<TPolicy>[]> } };
 
-    const event = ctx.tools.audit?.createAuditPolicy(policy);
+    const event = ctx.tools.audit?.createAuditEvent(policy, evaluationId);
 
-    event?.emit({
-        type: "policy.start",
-        trace: inputValue.audit?.trace,
-    });
 
     const violatedRules:PolicyResult['violatedRules'] = [];
     const strategy = options?.strategy || policy.options?.defaultStrategy || 'preemptive';
+
+
+    const evalPolicyMeta= auditPolicyMetaSchema.parse({
+        strategy,
+    });
+
+    const policyStartTimestamp = Date.now();
+
+    const policyStartEventId =event?.emit({
+        type: "policy.start",
+        trace: inputValue.audit?.trace,
+        meta: evalPolicyMeta,
+    });
 
     // Store all rule evaluation results (rule instance and result)
     type RuleType = ExtractRuleFromPolicy<TPolicy>;
@@ -72,21 +86,27 @@ export async function evaluatePolicy<
                 rule: rule as z.infer<typeof ruleSchema>,
                 result,
             })),
+            evaluationId,
             strategy: strategy,
         });
 
         event?.emit({
-            type: "policy.decision",
+            type:'policy.decision',
             decision: {
-                outcome: decision,
-                reason,
+                outcome: result.isAllowed ? 'allow' : 'deny',
+                reason: result.reason,
             },
             trace: inputValue.audit?.trace,
+            meta: evalPolicyMeta,
+            parentId: policyStartEventId,
         });
 
         event?.emit({
             type: "policy.end",
             trace: inputValue.audit?.trace,
+            durationMs: Date.now() - policyStartTimestamp,
+            meta: evalPolicyMeta,
+            parentId: policyStartEventId,
         });
 
         return result;
@@ -97,13 +117,19 @@ export async function evaluatePolicy<
     
     for (const rule of policy.rules.values()) {
         let result: RuleResult;
+        const ruleStartTimestamp = Date.now();
 
-        event?.emit({
+        const ruleData = {
+            name: rule.name,
+            id: rule.id,
+            version: rule.version,
+        }
+
+        const ruleStartEventId = event?.emit({
             type: "rule.start",
-            rule: {
-                name: rule.name,
-            },
+            rule: ruleData,
             trace: inputValue.audit?.trace,
+            parentId: policyStartEventId,
         });
 
         try {
@@ -115,23 +141,22 @@ export async function evaluatePolicy<
 
         event?.emit({
             type: "rule.decision",
-            rule: {
-                name: rule.name,
-            },
+            rule: ruleData,
             decision: {
                 outcome: result.allowed ? result.skipped ? 'skip' : 'allow' : 'deny',
                 reason: result.reason,
             },
             trace: inputValue.audit?.trace,
+            parentId: ruleStartEventId,
         });
         
 
         event?.emit({
             type: "rule.end",
-            rule: {
-                name: rule.name,
-            },
+            rule: ruleData,
             trace: inputValue.audit?.trace,
+            durationMs: Date.now() - ruleStartTimestamp,
+            parentId: ruleStartEventId,
         });
 
         // Always collect all rules and their results

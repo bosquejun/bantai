@@ -309,12 +309,12 @@ const cacheRule = defineRule(
 Perfect for production rate limiting:
 
 ```typescript
-import { withRateLimit, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
 import { createRedisStorage } from '@bantai-dev/storage-redis';
 
 const redisStorage = createRedisStorage(
   { url: process.env.REDIS_URL },
-  rateLimitSchema,
+  rateLimit.storageSchema,
   {
     prefix: 'ratelimit:',
   }
@@ -411,7 +411,7 @@ const storage = createRedisStorage(
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - ioredis >= 5.0.0

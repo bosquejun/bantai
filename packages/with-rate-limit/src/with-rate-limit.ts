@@ -1,5 +1,5 @@
 import { ContextDefinition, defineContext, ExtractContextShape, ExtractContextTools } from "@bantai-dev/core";
-import { withStorage } from "@bantai-dev/with-storage";
+import { createMemoryStorage, withStorage, type WithStorageTools } from "@bantai-dev/with-storage";
 import { z } from "zod";
 import { rateLimitSchema, RateLimitShape } from "./context.js";
 import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
@@ -19,9 +19,8 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
    * Helper type that infers the merged context tools with rate limit tools
    */
   type WithRateLimitTools<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = 
-    ExtractContextTools<TContext> & { 
-      rateLimit: RateLimitTools<TContext>, 
-      storage: RateLimitStorage,
+    ExtractContextTools<TContext> & WithStorageTools<TContext, typeof rateLimit.storageSchema, string> & { 
+      rateLimit: RateLimitTools<TContext>,
     };
 
   /**
@@ -68,16 +67,15 @@ import { rateLimit, RateLimitStorage } from "./tools/rate-limit.js";
       rateLimit: {
         ...rateLimit,
         generateKey: options.generateKey,
-      },
-      // Users should provide their own storage implementation
-      // For development/testing, they can use a simple in-memory storage
-      storage: options.storage,
-    }
+      }
+    };
+
+    const storage = options.storage || createMemoryStorage(rateLimit.storageSchema);
   
     return withStorage(defineContext(mergedSchema, {
       tools,
       defaultValues
-    }), options.storage) as WithRateLimitReturnType<TContext>;
+    }), storage, { storageName: "rateLimit" }) as WithRateLimitReturnType<TContext>;
   };
 
 

@@ -1,11 +1,19 @@
+import { versionSchema } from "src/context/schema.js";
+import { policySchema, policyStrategySchema } from "src/policies/schema.js";
+import { ruleSchema } from "src/rules/schema.js";
 import { z } from "zod";
+
+
+export const auditPolicyMetaSchema = z.object({
+  strategy: policyStrategySchema,
+});
 
 /**
  * Core audit event schema (v1)
  */
 export const auditEventSchema = z.object({
   /** unique event id */
-  id: z.string(),
+  id: z.custom<`event:${string}`>().refine((value) => value.startsWith('event:'), { message: 'ID must start with "event:"' }),
 
   /** event type */
   type: z.enum([
@@ -25,15 +33,10 @@ export const auditEventSchema = z.object({
   evaluationId: z.string(),
 
   /** policy identity */
-  policy: z.object({
-    name: z.string(),
-    version: z.string().optional(),
-  }),
+  policy: policySchema.pick({ name: true, version: true, id: true }),
 
   /** rule identity (only for rule events) */
-  rule: z.object({
-    name: z.string(),
-  }).optional(),
+  rule: ruleSchema.pick({ name: true, version:true, id:true }).optional(),
 
   /** decision outcome (only for decision events) */
   decision: z.object({
@@ -49,4 +52,10 @@ export const auditEventSchema = z.object({
 
   /** extension-owned data */
   meta: z.record(z.string(), z.unknown()).optional(),
+
+  auditVersion: versionSchema,
+
+  durationMs: z.number().nullable().default(null).optional(),
+
+  parentId: z.string().optional(),
 });

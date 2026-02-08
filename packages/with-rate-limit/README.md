@@ -23,11 +23,11 @@ yarn add @bantai-dev/with-rate-limit @bantai-dev/core @bantai-dev/with-storage z
 ```typescript
 import { z } from 'zod';
 import { defineContext, definePolicy, evaluatePolicy, allow } from '@bantai-dev/core';
+import { createMemoryStorage } from '@bantai-dev/with-storage';
 import {
   withRateLimit,
   defineRateLimitRule,
-  createMemoryStorage,
-  rateLimitSchema,
+  rateLimit,
 } from '@bantai-dev/with-rate-limit';
 
 // 1. Define your base context
@@ -41,7 +41,7 @@ const apiContext = defineContext(
 // 2. Extend context with rate limiting
 // generateKey will automatically create keys from your input
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimitSchema),
+  storage: createMemoryStorage(rateLimit.storageSchema),
   generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
   defaultValues: {
     rateLimit: {
@@ -60,6 +60,8 @@ const rateLimitRule = defineRateLimitRule(
   async (input) => {
     // Your business logic here
     // Rate limit is already checked and will be incremented on allow
+    // input.currentLimit contains the rate limit check result
+    console.log(`Remaining: ${input.currentLimit.remaining}`);
     return allow({ reason: 'Request allowed' });
   },
   {
@@ -159,8 +161,11 @@ Extends a Bantai context with rate limiting capabilities. Adds `rateLimit` schem
 **Example with generateKey:**
 
 ```typescript
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
+
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimitSchema),
+  storage: createMemoryStorage(rateLimit.storageSchema),
   generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
   defaultValues: {
     rateLimit: {
@@ -174,9 +179,66 @@ const rateLimitedContext = withRateLimit(apiContext, {
 
 When using `defineRateLimitRule`, if `rateLimit.key` is not provided in the input, the `generateKey` function will be used automatically.
 
+### `defineRateLimitRule(context, name, evaluate, options)`
+
+A helper function that automatically handles rate limit checking and incrementing. This simplifies rule creation by handling the rate limit logic for you.
+
+**Parameters:**
+- `context`: A context extended with rate limiting capabilities via `withRateLimit`
+- `name`: Unique name for the rule
+- `evaluate`: Your rule evaluation function. The function receives:
+  - `input`: The context input with an additional `currentLimit` property containing the rate limit check result
+  - `context`: The evaluation context with tools
+- `options`: Configuration object
+  - `config`: Rate limit configuration (required). This will be merged with any `rateLimit` config from the input.
+  - `onAllow?`: Optional hook called after rate limit is incremented (if your rule allows)
+  - `onDeny?`: Optional hook called if your rule denies
+
+**Returns:** `RuleDefinition<TContext, TName>`
+
+**How it works:**
+
+1. Checks the rate limit before evaluating your rule
+2. If rate limit is exceeded, returns `deny` immediately
+3. If rate limit passes, evaluates your rule with `currentLimit` available in the input
+4. On allow, automatically increments the rate limit counter
+5. Calls your optional hooks
+
+**Key resolution order:**
+
+1. If `rateLimit.key` is provided in the input, use it
+2. Otherwise, if `generateKey` function is available, use it
+3. Otherwise, fall back to `'unknown-key'`
+
+**Example:**
+```typescript
+const rateLimitRule = defineRateLimitRule(
+  rateLimitedContext,
+  'api-rule',
+  async (input) => {
+    // input.currentLimit contains the rate limit check result
+    console.log(`Remaining: ${input.currentLimit.remaining}`);
+    
+    // Your business logic here
+    return allow({ reason: 'Request processed' });
+  },
+  {
+    config: {
+      limit: 100,
+      period: '1h',
+      type: 'fixed-window',
+    },
+    onAllow: async (result, input) => {
+      // Optional: Additional logic after rate limit increment
+      console.log(`Request allowed for ${input.userId}`);
+    },
+  }
+);
+```
+
 ### `rateLimit.checkRateLimit(storage, config, clock?)`
 
-Checks if a rate limit would be exceeded without incrementing the counter. Use this in your rule's `evaluate` function.
+Checks if a rate limit would be exceeded without incrementing the counter. Use this in your rule's `evaluate` function when not using `defineRateLimitRule`.
 
 **Parameters:**
 - `storage`: Storage adapter implementing `RateLimitStorage`
@@ -197,7 +259,7 @@ Checks if a rate limit would be exceeded without incrementing the counter. Use t
 
 ### `rateLimit.incrementRateLimit(storage, config, clock?)`
 
-Increments the rate limit counter. Use this in your rule's `onAllow` hook.
+Increments the rate limit counter. Use this in your rule's `onAllow` hook when not using `defineRateLimitRule`.
 
 **Parameters:**
 - `storage`: Storage adapter implementing `RateLimitStorage`
@@ -205,15 +267,6 @@ Increments the rate limit counter. Use this in your rule's `onAllow` hook.
 - `clock?`: Optional clock function for testing (defaults to `Date.now`)
 
 **Returns:** `Promise<void>`
-
-### `createMemoryStorage(schema)`
-
-Creates an in-memory storage adapter for development and testing. Not suitable for production use.
-
-**Parameters:**
-- `schema`: Zod schema for validating storage data
-
-**Returns:** `StorageAdapter<T>`
 
 ## Storage Integration
 
@@ -227,11 +280,11 @@ The rate limiting extension requires a storage adapter. You can use:
 
 ```typescript
 import { createRedisStorage } from '@bantai-dev/storage-redis';
-import { rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { rateLimit } from '@bantai-dev/with-rate-limit';
 
 const redisStorage = createRedisStorage(
   { url: process.env.REDIS_URL },
-  rateLimitSchema
+  rateLimit.storageSchema
 );
 
 const rateLimitedContext = withRateLimit(apiContext, {
@@ -383,7 +436,7 @@ The package provides full TypeScript type safety:
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - @bantai-dev/core

@@ -5,6 +5,8 @@ export interface StorageAdapter<T> {
     get(key: string): Promise<T | undefined>
     set(key: string, value: T, ttlMs?: number): Promise<void>
     delete(key: string): Promise<void>
+
+    append(key: string, value: T): Promise<void>
   
     update?(
       key: string,
@@ -49,6 +51,10 @@ export function createMemoryStorage<T extends z.ZodType>(
 
     async delete(key) {
       store.delete(key)
+    },
+
+    async append(key, value) {
+      this.set(key, value);
     },
 
     async update(key, updater) {

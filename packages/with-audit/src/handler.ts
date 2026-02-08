@@ -1,12 +1,18 @@
-import { AuditEvent, AuditHandler, AuditSink, auditEventSchema } from "@bantai-dev/core";
-import { nanoid } from 'nanoid';
+import { AuditEvent, AuditHandler, AuditSink, PolicyDefinition, auditEventSchema } from "@bantai-dev/core";
+import { generateId } from "@bantai-dev/shared";
 
 export function createWithAuditHandler(
-    policy: { name: string; version?: string },
-    sink: AuditSink
-  ): AuditHandler {
+    sink: AuditSink,
+  ) {
     let ended = false;
-    const evaluationId = `eval_${nanoid()}`;
+    let evaluationId: string;
+    let policy: Pick<PolicyDefinition<any, any, any>, 'name' | 'version' | 'id'>;
+
+    function init(_policy: Pick<PolicyDefinition<any, any, any>, 'name' | 'version' | 'id'>, _evaluationId: string): AuditHandler {
+      policy = _policy;
+      evaluationId = _evaluationId;
+      return { emit };
+    }
   
     function emit(event: Omit<AuditEvent, "evaluationId" | "policy" | 'id' | 'timestamp'>) {
       if (ended) throw new Error("Cannot emit events after policy.end");
@@ -15,7 +21,7 @@ export function createWithAuditHandler(
         ...event,
         evaluationId,
         policy,
-        id: `event_${nanoid()}`,
+        id: generateId('event'),
         timestamp: Date.now(),
       };
   
@@ -29,8 +35,10 @@ export function createWithAuditHandler(
       if (validated.type === "policy.end") {
         ended = true;
       }
+
+      return validated.id;
     }
   
-    return { emit };
+    return { emit, init };
   }
   

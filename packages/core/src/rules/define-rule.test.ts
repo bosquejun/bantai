@@ -21,7 +21,7 @@ describe('defineRule', () => {
     expect(rule.name).toBe('is-adult');
     expect(typeof rule.evaluate).toBe('function');
 
-    const result = await rule.evaluate({ age: 20 });
+    const result = await rule.evaluate({ age: 20 }, { tools: {} });
     expect(result.allowed).toBe(true);
     expect(result.reason).toBe('User is an adult');
   });
@@ -39,7 +39,7 @@ describe('defineRule', () => {
       return deny({ reason: 'User is not an admin' });
     });
 
-    const result = await rule.evaluate({ role: 'admin' });
+    const result = await rule.evaluate({ role: 'admin' }, { tools: {} });
     expect(result.allowed).toBe(true);
     expect(result.reason).toBe('User is an admin');
   });
@@ -57,7 +57,7 @@ describe('defineRule', () => {
       return deny({ reason: 'User is not an admin' });
     });
 
-    const result = await rule.evaluate({ role: 'user' });
+    const result = await rule.evaluate({ role: 'user' }, { tools: {} });
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe('User is not an admin');
   });
@@ -82,7 +82,7 @@ describe('defineRule', () => {
     const result = await rule.evaluate({
       user: { id: '1', email: 'test@example.com' },
       permissions: ['read', 'write'],
-    });
+    }, { tools: {} });
 
     expect(result.allowed).toBe(true);
     expect(result.reason).toBe('User has read permission');
@@ -100,7 +100,7 @@ describe('defineRule', () => {
       return allow({ reason: 'Async check passed' });
     });
 
-    const result = await rule.evaluate({ userId: '123' });
+    const result = await rule.evaluate({ userId: '123' }, { tools: {} });
     expect(result.allowed).toBe(true);
     expect(result.reason).toBe('Async check passed');
   });
@@ -115,11 +115,11 @@ describe('defineRule', () => {
       return input.value ? allow() : deny();
     });
 
-    const allowResult = await rule.evaluate({ value: true });
+    const allowResult = await rule.evaluate({ value: true }, { tools: {} });
     expect(allowResult.allowed).toBe(true);
     expect(allowResult.reason).toBeNull();
 
-    const denyResult = await rule.evaluate({ value: false });
+    const denyResult = await rule.evaluate({ value: false }, { tools: {} });
     expect(denyResult.allowed).toBe(false);
     expect(denyResult.reason).toBeNull();
   });

@@ -14,6 +14,5 @@
   "linked": [],
   "access": "public",
   "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": ["@bantai-dev/openai"]
+  "updateInternalDependencies": "patch"
 }

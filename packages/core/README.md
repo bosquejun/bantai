@@ -315,7 +315,7 @@ Bantai is designed for policy-based decision-making across various domains:
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 

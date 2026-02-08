@@ -1,3 +1,4 @@
+import { versionSchema } from "src/context/schema.js";
 import { z } from "zod";
 
 
@@ -26,11 +27,13 @@ export const ruleResultSchema = z.object({
 
 export const ruleSchema = z.object({
     name: z.string(),
+    id: z.custom<`rule:${string}`>().refine((value) => value.startsWith('rule:'), { message: 'ID must start with "rule:"' }),
     evaluate: z.function(),
     hooks: z.object({
         onAllow: z.function().optional(),
         onDeny: z.function().optional()
-    }).optional()
+    }).optional(),
+    version: versionSchema,
 }).brand<'BantaiRule'>();
 
 

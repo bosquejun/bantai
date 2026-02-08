@@ -1,4 +1,5 @@
 import { ContextDefinition, ExtractContextShape, ExtractContextTools, defineRule, deny, type RuleDefinition, type RuleResult } from "@bantai-dev/core";
+import { WithStorageTools } from "@bantai-dev/with-storage";
 import { z } from "zod";
 import { RateLimitShape, rateLimitSchema } from "./context.js";
 import { RateLimitCheckResult } from "./index.js";
@@ -97,9 +98,8 @@ if(!context.tools.rateLimit || !context.tools.storage) {
     name,
     async (input, ctx) => {
       // Type-safe access to rate limit tools and input
-      const tools = ctx.tools as unknown as ExtractRateLimitTools<TContext> & {
+      const tools = ctx.tools as unknown as ExtractRateLimitTools<TContext> & WithStorageTools<TContext, typeof rateLimit.storageSchema, string> & {
         rateLimit: typeof rateLimit & { generateKey?: (input: ExtractContextShape<TContext>) => string };
-        storage: RateLimitStorage;
       };
       const typedInput = input as ExtractRateLimitInput<TContext>;
 
@@ -113,7 +113,7 @@ if(!context.tools.rateLimit || !context.tools.storage) {
 
       // Check rate limit for all supported types (fixed-window, sliding-window, token-bucket)
       let rateLimitResult = await tools.rateLimit.checkRateLimit(
-        tools.storage,
+        tools.storage.get("rateLimit") as RateLimitStorage,
         rateLimitConfig
       );
 
@@ -128,10 +128,10 @@ if(!context.tools.rateLimit || !context.tools.storage) {
     {
       onAllow: async (result, input, ctx) => {
         // Type-safe access to rate limit tools and input
-        const tools = ctx.tools as unknown as ExtractRateLimitTools<TContext> & {
+        const tools = ctx.tools as unknown as ExtractRateLimitTools<TContext> & WithStorageTools<TContext, typeof rateLimit.storageSchema, string> & {
           rateLimit: typeof rateLimit & { generateKey?: (input: ExtractContextShape<TContext>) => string };
-          storage: RateLimitStorage;
         };
+
 
         const typedInput = input as ExtractRateLimitInput<TContext>;
 
@@ -145,7 +145,7 @@ if(!context.tools.rateLimit || !context.tools.storage) {
 
        // Increment rate limit counter when rule allows
        await tools.rateLimit.incrementRateLimit(
-        tools.storage,
+        tools.storage.get("rateLimit") as RateLimitStorage,
         rateLimitConfig
       );
         // Call user's onAllow hook if provided

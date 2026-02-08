@@ -55,7 +55,7 @@
   },
   "dependencies": {
     "@bantai-dev/core": "workspace:*",
-    "nanoid": "^5.1.6",
+    "@bantai-dev/shared": "workspace:*",
     "zod": "^4.3.5"
   },
   "peerDependencies": {

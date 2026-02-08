@@ -1,7 +1,7 @@
 {
-  "name": "@bantai-dev/core",
-  "version": "1.1.0",
-  "description": "TypeScript-first policy evaluation library for rule-based validation and decision-making",
+  "name": "@bantai-dev/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for @bantai-dev",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,25 +19,16 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/bosquejun/bantai.git",
-    "directory": "packages/core"
+    "directory": "packages/shared"
   },
   "homepage": "https://bantai.vercel.app/",
   "bugs": {
     "url": "https://github.com/bosquejun/bantai/issues"
   },
   "keywords": [
-    "policy-engine",
-    "policy-library",
-    "decision-engine",
-    "rule-engine",
-    "validation-library",
-    "business-rules",
-    "policy-evaluation",
-    "authorization",
-    "access-control",
-    "validation",
-    "zod",
-    "typescript"
+    "shared",
+    "shared-utilities",
+    "bantai"
   ],
   "author": {
     "name": "Jun",
@@ -49,7 +40,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsc",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -63,10 +54,6 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "@bantai-dev/shared": "workspace:*",
-    "zod": "^4.3.5"
-  },
-  "peerDependencies": {
-    "zod": "^4.3.5"
+    "nanoid": "^5.1.6"
   }
 }

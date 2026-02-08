@@ -65,9 +65,41 @@ console.log(result.evaluatedRules); // Array of all evaluated rules
 This monorepo contains the following packages:
 
 - **[@bantai-dev/core](./packages/core/)** - Core policy evaluation library
-- **[@bantai-dev/with-rate-limit](./packages/with-rate-limit/)** - Rate limiting extension for Bantai
-- **[@bantai-dev/with-storage](./packages/with-storage/)** - Storage plugin for Bantai
-- **[@bantai-dev/storage-redis](./packages/storage-redis/)** - Redis storage adapter for Bantai
+- **[@bantai-dev/with-rate-limit](./packages/with-rate-limit/)** - Rate limiting extension for Bantai with support for fixed-window, sliding-window, and token-bucket algorithms
+- **[@bantai-dev/with-audit](./packages/with-audit/)** - Audit logging extension for Bantai with event tracking and sinks
+- **[@bantai-dev/with-storage](./packages/with-storage/)** - Storage plugin for Bantai with adapter interface
+- **[@bantai-dev/storage-redis](./packages/storage-redis/)** - Redis storage adapter for Bantai with distributed locking and TTL support
+
+## Extensions
+
+Bantai is designed to be extensible. The following extensions are available:
+
+- **[@bantai-dev/with-rate-limit](./packages/with-rate-limit/)** - Add rate limiting with fixed-window, sliding-window, or token-bucket strategies
+- **[@bantai-dev/with-audit](./packages/with-audit/)** - Add audit logging and event tracking for policy evaluations
+- **[@bantai-dev/with-storage](./packages/with-storage/)** - Add storage capabilities with a flexible adapter interface
+- **[@bantai-dev/storage-redis](./packages/storage-redis/)** - Production-ready Redis storage adapter with distributed locking
+
+Extensions can be composed together:
+
+```typescript
+import { z } from 'zod';
+import { defineContext } from '@bantai-dev/core';
+import { withRateLimit, rateLimitSchema } from '@bantai-dev/with-rate-limit';
+import { withAudit } from '@bantai-dev/with-audit';
+import { createRedisStorage } from '@bantai-dev/storage-redis';
+
+const baseContext = defineContext(z.object({ userId: z.string() }));
+
+// Compose multiple extensions
+const context = withAudit(
+  withRateLimit(baseContext, {
+    storage: createRedisStorage({ url: process.env.REDIS_URL }, rateLimitSchema),
+  }),
+  {
+    sinks: [(event) => console.log('Audit:', event)],
+  }
+);
+```
 
 ## Documentation
 
@@ -75,6 +107,10 @@ For detailed documentation, API reference, and examples, visit:
 
 - **Official Documentation**: [https://bantai.vercel.app/](https://bantai.vercel.app/)
 - **Core Package README**: [./packages/core/README.md](./packages/core/README.md)
+- **Rate Limiting Extension**: [./packages/with-rate-limit/README.md](./packages/with-rate-limit/README.md)
+- **Audit Extension**: [./packages/with-audit/README.md](./packages/with-audit/README.md)
+- **Storage Extension**: [./packages/with-storage/README.md](./packages/with-storage/README.md)
+- **Redis Storage**: [./packages/storage-redis/README.md](./packages/storage-redis/README.md)
 
 ## Project Structure
 
@@ -83,10 +119,16 @@ bantai-dev/
 ├── packages/
 │   ├── core/              # Main policy evaluation library
 │   ├── with-rate-limit/   # Rate limiting extension
+│   ├── with-audit/        # Audit logging extension
 │   ├── with-storage/      # Storage plugin
 │   ├── storage-redis/     # Redis storage adapter
+│   ├── shared/            # Shared utilities (internal)
+│   ├── eslint-config/     # ESLint configurations
+│   └── typescript-config/ # TypeScript configurations
 ├── apps/
 │   └── docs/              # Documentation site
+├── examples/
+│   └── nextjs-with-rate-limit-redis/ # Example Next.js app
 └── turbo.json            # Turborepo configuration
 ```
 
@@ -96,7 +138,7 @@ This project uses [Turborepo](https://turborepo.org/) for monorepo management an
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - pnpm >= 9.0.0
 
 ### Setup

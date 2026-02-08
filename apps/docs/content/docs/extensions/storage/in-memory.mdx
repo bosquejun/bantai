@@ -288,9 +288,10 @@ const cacheRule = defineRule(
 Perfect for development and testing rate limiting:
 
 ```typescript
-import { withRateLimit, rateLimitSchema, createMemoryStorage } from '@bantai-dev/with-rate-limit';
+import { createMemoryStorage } from '@bantai-dev/with-storage';
+import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
 
-const storage = createMemoryStorage(rateLimitSchema);
+const storage = createMemoryStorage(rateLimit.storageSchema);
 
 const rateLimitedContext = withRateLimit(baseContext, {
   storage,
@@ -376,7 +377,7 @@ const context = withStorage(baseContext, storage);
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 20.9.0
 - TypeScript >= 5.0
 - Zod >= 4.3.5
 - @bantai-dev/with-storage or @bantai-dev/with-rate-limit
