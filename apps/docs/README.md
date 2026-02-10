@@ -38,12 +38,12 @@ Documentation content is written in MDX format and stored in the `content/docs/`
 
 1. Create a new `.mdx` file in `content/docs/`
 2. Add frontmatter metadata:
-   ```mdx
-   ---
-   title: Your Page Title
-   description: Page description
-   ---
-   ```
+    ```mdx
+    ---
+    title: Your Page Title
+    description: Page description
+    ---
+    ```
 3. Write your content using MDX syntax
 4. The page will be automatically available at `/docs/your-page-name`
 

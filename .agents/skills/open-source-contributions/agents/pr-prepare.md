@@ -28,6 +28,7 @@ cat .github/PULL_REQUEST_TEMPLATE.md 2>/dev/null
 ```
 
 Extract:
+
 - Required checks (lint, test, format)
 - Commit message format
 - PR description requirements
@@ -47,6 +48,7 @@ git status --short
 ```
 
 If on main/master:
+
 - WARN: "You're on the default branch. Create a feature branch first."
 - Suggest: `git checkout -b feature/description`
 
@@ -65,6 +67,7 @@ npx prettier --check . 2>/dev/null || true
 ```
 
 If lint errors:
+
 - List errors clearly
 - Offer to fix: `npm run lint -- --fix` or `npx prettier --write .`
 
@@ -79,6 +82,7 @@ npm run format:check 2>&1 || npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
 ```
 
 If formatting issues:
+
 - List files needing formatting
 - Ask: "Run formatter to fix these?"
 
@@ -90,6 +94,7 @@ npx tsc --noEmit 2>&1
 ```
 
 If type errors:
+
 - Report clearly
 - These MUST be fixed before PR
 
@@ -104,6 +109,7 @@ npm run test:coverage 2>/dev/null || true
 ```
 
 If test failures:
+
 - Report which tests failed
 - These MUST be fixed before PR
 
@@ -133,11 +139,13 @@ git log --oneline main..HEAD 2>/dev/null || git log --oneline master..HEAD
 ```
 
 Check against project conventions:
+
 - Conventional commits? (`feat:`, `fix:`, `docs:`)
 - Issue references? (`#123`)
 - Signed commits required?
 
 If commits need cleanup:
+
 - Suggest: `git rebase -i main` to squash/reword
 
 ### 9. Check Documentation
@@ -151,6 +159,7 @@ cat CHANGELOG.md 2>/dev/null | head -30
 ```
 
 If adding new feature:
+
 - Does README document it?
 - Does CHANGELOG have an entry?
 
@@ -191,36 +200,41 @@ Closes #[issue-number]
 
 ### Pre-flight Checks
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Lint | ✅/❌ | [details] |
-| Format | ✅/❌ | [details] |
-| Types | ✅/❌ | [details] |
-| Tests | ✅/❌ | [details] |
+| Check  | Status | Notes     |
+| ------ | ------ | --------- |
+| Lint   | ✅/❌  | [details] |
+| Format | ✅/❌  | [details] |
+| Types  | ✅/❌  | [details] |
+| Tests  | ✅/❌  | [details] |
 
 ### Code Quality
 
-| Check | Status | Count |
-|-------|--------|-------|
-| console.log | ✅/⚠️ | [n] found |
-| TODO/FIXME | ✅/⚠️ | [n] found |
-| debugger | ✅/⚠️ | [n] found |
-| Skipped tests | ✅/⚠️ | [n] found |
+| Check         | Status | Count     |
+| ------------- | ------ | --------- |
+| console.log   | ✅/⚠️  | [n] found |
+| TODO/FIXME    | ✅/⚠️  | [n] found |
+| debugger      | ✅/⚠️  | [n] found |
+| Skipped tests | ✅/⚠️  | [n] found |
 
 ### Commits
+
 [List of commits with format check]
 
 ### Documentation
+
 - README updated: ✅/❌/N/A
 - CHANGELOG entry: ✅/❌/N/A
 
 ### Ready for PR?
+
 [YES ✅ / NO ❌ - list blockers]
 
 ### Suggested PR Description
+
 [Generated description based on commits]
 
 ### Next Steps
+
 1. [Fix any blockers]
 2. Push branch: `git push -u origin [branch]`
 3. Create PR: `gh pr create --title "..." --body "..."`
@@ -228,15 +242,15 @@ Closes #[issue-number]
 
 ## Commit Message Conventions
 
-| Type | Use For |
-|------|---------|
-| `feat:` | New feature |
-| `fix:` | Bug fix |
-| `docs:` | Documentation only |
-| `style:` | Formatting, no code change |
+| Type        | Use For                     |
+| ----------- | --------------------------- |
+| `feat:`     | New feature                 |
+| `fix:`      | Bug fix                     |
+| `docs:`     | Documentation only          |
+| `style:`    | Formatting, no code change  |
 | `refactor:` | Code change, no feature/fix |
-| `test:` | Adding tests |
-| `chore:` | Build, deps, etc. |
+| `test:`     | Adding tests                |
+| `chore:`    | Build, deps, etc.           |
 
 ## Do NOT
 

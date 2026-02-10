@@ -21,44 +21,35 @@ yarn add @bantai-dev/core zod
 ## Quick Start
 
 ```typescript
-import { z } from 'zod';
-import { 
-  allow, 
-  defineContext, 
-  defineRule,
-  definePolicy, 
-  deny, 
-  evaluatePolicy 
-} from '@bantai-dev/core';
+import { z } from "zod";
+import {
+    allow,
+    defineContext,
+    defineRule,
+    definePolicy,
+    deny,
+    evaluatePolicy,
+} from "@bantai-dev/core";
 
 // 1. Define context schema
 const ageContext = defineContext(
-  z.object({
-    age: z.number().min(0).max(150),
-  })
+    z.object({
+        age: z.number().min(0).max(150),
+    })
 );
 
 // 2. Define a rule
-const ageVerificationRule = defineRule(
-  ageContext,
-  'age-verification',
-  async (input) => {
+const ageVerificationRule = defineRule(ageContext, "age-verification", async (input) => {
     if (input.age >= 18) {
-      return allow({ reason: 'User is of legal age' });
+        return allow({ reason: "User is of legal age" });
     }
-    return deny({ reason: 'User must be 18 or older' });
-  }
-);
+    return deny({ reason: "User must be 18 or older" });
+});
 
 // 3. Define a policy
-const agePolicy = definePolicy(
-  ageContext,
-  'age-verification-policy',
-  [ageVerificationRule],
-  {
-    defaultStrategy: 'preemptive',
-  }
-);
+const agePolicy = definePolicy(ageContext, "age-verification-policy", [ageVerificationRule], {
+    defaultStrategy: "preemptive",
+});
 
 // 4. Evaluate policy
 const result = await evaluatePolicy(agePolicy, { age: 25 });
@@ -77,14 +68,14 @@ A context defines the schema of data available when evaluating rules. It uses Zo
 
 ```typescript
 const appContext = defineContext(
-  z.object({
-    userId: z.string(),
-    role: z.enum(['admin', 'user']),
-    timestamp: z.number(),
-  }),
-  {
-    timestamp: Date.now(), // Default value
-  }
+    z.object({
+        userId: z.string(),
+        role: z.enum(["admin", "user"]),
+        timestamp: z.number(),
+    }),
+    {
+        timestamp: Date.now(), // Default value
+    }
 );
 ```
 
@@ -94,39 +85,35 @@ Rules are the building blocks that make decisions. They evaluate input and retur
 
 ```typescript
 const adminRule = defineRule(
-  appContext,
-  'check-admin',
-  async (input) => {
-    if (input.role === 'admin') {
-      return allow({ reason: 'User is admin' });
+    appContext,
+    "check-admin",
+    async (input) => {
+        if (input.role === "admin") {
+            return allow({ reason: "User is admin" });
+        }
+        return deny({ reason: "Admin access required" });
+    },
+    {
+        onAllow: async (result, input, { tools }) => {
+            console.log(`Admin access granted to ${input.userId}`);
+        },
+        onDeny: async (result, input, { tools }) => {
+            console.log(`Admin access denied to ${input.userId}`);
+        },
     }
-    return deny({ reason: 'Admin access required' });
-  },
-  {
-    onAllow: async (result, input, { tools }) => {
-      console.log(`Admin access granted to ${input.userId}`);
-    },
-    onDeny: async (result, input, { tools }) => {
-      console.log(`Admin access denied to ${input.userId}`);
-    },
-  }
 );
 ```
 
 Rules can be synchronous or asynchronous:
 
 ```typescript
-const asyncRule = defineRule(
-  appContext,
-  'check-database',
-  async (input, { tools }) => {
+const asyncRule = defineRule(appContext, "check-database", async (input, { tools }) => {
     const user = await db.getUser(input.userId);
     if (user?.active) {
-      return allow({ reason: 'User is active' });
+        return allow({ reason: "User is active" });
     }
-    return deny({ reason: 'User is not active' });
-  }
-);
+    return deny({ reason: "User is not active" });
+});
 ```
 
 ### Policies
@@ -136,26 +123,21 @@ Policies combine multiple rules and define an evaluation strategy.
 **Preemptive Strategy** (fail-fast): Stops at first violation. Best for security checks and fast rejection.
 
 ```typescript
-const securityPolicy = definePolicy(
-  appContext,
-  'security-policy',
-  [authRule, permissionRule],
-  {
-    defaultStrategy: 'preemptive',
-  }
-);
+const securityPolicy = definePolicy(appContext, "security-policy", [authRule, permissionRule], {
+    defaultStrategy: "preemptive",
+});
 ```
 
 **Exhaustive Strategy**: Collects all violations. Best for form validation and comprehensive feedback.
 
 ```typescript
 const validationPolicy = definePolicy(
-  appContext,
-  'validation-policy',
-  [emailRule, passwordRule, termsRule],
-  {
-    defaultStrategy: 'exhaustive',
-  }
+    appContext,
+    "validation-policy",
+    [emailRule, passwordRule, termsRule],
+    {
+        defaultStrategy: "exhaustive",
+    }
 );
 ```
 
@@ -166,6 +148,7 @@ const validationPolicy = definePolicy(
 Creates a context definition with a Zod schema.
 
 **Parameters:**
+
 - `schema`: Zod object schema
 - `defaultValues?`: Optional default values for context fields
 - `tools?`: Optional tools object to make available to rules
@@ -177,29 +160,31 @@ Creates a context definition with a Zod schema.
 Defines a rule within a context.
 
 **Parameters:**
+
 - `context`: Context definition
 - `name`: Rule identifier
 - `evaluate`: Async function that takes input and context, returns `RuleResult`
 - `hooks?`: Optional hooks object:
-  - `onAllow?`: Function called when rule allows
-  - `onDeny?`: Function called when rule denies
+    - `onAllow?`: Function called when rule allows
+    - `onDeny?`: Function called when rule denies
 
 **Returns:** `RuleDefinition`
 
 **Example:**
+
 ```typescript
 const rule = defineRule(
-  context,
-  'my-rule',
-  async (input, { tools }) => {
-    // Evaluation logic
-    return allow({ reason: 'Success' });
-  },
-  {
-    onAllow: async (result, input, { tools }) => {
-      // Side effect on allow
+    context,
+    "my-rule",
+    async (input, { tools }) => {
+        // Evaluation logic
+        return allow({ reason: "Success" });
     },
-  }
+    {
+        onAllow: async (result, input, { tools }) => {
+            // Side effect on allow
+        },
+    }
 );
 ```
 
@@ -208,11 +193,12 @@ const rule = defineRule(
 Defines a policy that combines multiple rules.
 
 **Parameters:**
+
 - `context`: Context definition (must match all rules)
 - `name`: Policy identifier
 - `rules`: Array of rule definitions
 - `options?`: Optional configuration:
-  - `defaultStrategy?`: `'preemptive'` or `'exhaustive'` (default: `'preemptive'`)
+    - `defaultStrategy?`: `'preemptive'` or `'exhaustive'` (default: `'preemptive'`)
 
 **Returns:** `PolicyDefinition`
 
@@ -221,14 +207,16 @@ Defines a policy that combines multiple rules.
 Evaluates a policy against input data.
 
 **Parameters:**
+
 - `policy`: Policy definition
 - `input`: Context data to evaluate (must match policy's context schema)
 - `options?`: Optional evaluation options:
-  - `strategy?`: Override default strategy for this evaluation
+    - `strategy?`: Override default strategy for this evaluation
 
 **Returns:** `Promise<PolicyResult>`
 
 **PolicyResult:**
+
 ```typescript
 {
   decision: 'allow' | 'deny';
@@ -245,14 +233,16 @@ Evaluates a policy against input data.
 Helper functions to create rule results.
 
 **Parameters:**
+
 - `reason?`: Optional object with `reason` property describing the result
 
 **Returns:** `RuleResult`
 
 **Example:**
+
 ```typescript
-return allow({ reason: 'User is valid' });
-return deny({ reason: 'User is invalid' });
+return allow({ reason: "User is valid" });
+return deny({ reason: "User is invalid" });
 ```
 
 ## Type Safety
@@ -268,18 +258,18 @@ Bantai provides full TypeScript type safety:
 ```typescript
 // TypeScript will enforce that all required context fields are provided
 const result = await evaluatePolicy(agePolicy, {
-  age: 25, // ✅ TypeScript ensures this field exists
-  // invalidField: 'test', // ❌ TypeScript error
+    age: 25, // ✅ TypeScript ensures this field exists
+    // invalidField: 'test', // ❌ TypeScript error
 });
 
 // TypeScript ensures rules belong to the same context
 const policy = definePolicy(
-  ageContext,
-  'my-policy',
-  [ageVerificationRule], // ✅ Rules must use the same context
-  {
-    defaultStrategy: 'preemptive',
-  }
+    ageContext,
+    "my-policy",
+    [ageVerificationRule], // ✅ Rules must use the same context
+    {
+        defaultStrategy: "preemptive",
+    }
 );
 ```
 

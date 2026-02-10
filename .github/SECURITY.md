@@ -65,4 +65,3 @@ We believe in recognizing security researchers who help keep Bantai secure. If y
 - Add your name to our SECURITY.md file (with your permission)
 
 Thank you for helping keep Bantai and our users safe!
-

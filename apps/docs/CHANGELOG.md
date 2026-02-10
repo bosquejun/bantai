@@ -5,28 +5,28 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @bantai-dev/core@1.2.0
+    - @bantai-dev/core@1.2.0
 
 ## 0.2.3
 
 ### Patch Changes
 
 - Updated dependencies
-  - @bantai-dev/core@1.1.0
+    - @bantai-dev/core@1.1.0
 
 ## 0.2.2
 
 ### Patch Changes
 
 - Updated dependencies
-  - @bantai-dev/core@1.0.0
+    - @bantai-dev/core@1.0.0
 
 ## 0.2.1
 
 ### Patch Changes
 
 - Updated dependencies
-  - @bantai-dev/core@0.6.0
+    - @bantai-dev/core@0.6.0
 
 ## 0.2.0
 
@@ -37,7 +37,7 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @bantai-dev/core@0.5.0
+    - @bantai-dev/core@0.5.0
 
 ## 0.1.0
 

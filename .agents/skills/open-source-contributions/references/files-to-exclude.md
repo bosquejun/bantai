@@ -7,6 +7,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## Personal Development Artifacts
 
 ### Session & Notes Files
+
 ```
 ❌ SESSION.md               # Session tracking
 ❌ NOTES.md                 # Development notes
@@ -21,6 +22,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Planning Documents
+
 ```
 ❌ planning/                # Entire planning directory
 ❌ IMPLEMENTATION_PHASES.md # Phase-based planning
@@ -34,6 +36,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Research & Reference
+
 ```
 ❌ research-logs/           # Research directory
 ❌ references/              # Personal references (skill-specific)
@@ -48,6 +51,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## Screenshots & Visual Assets
 
 ### Debug & Development Screenshots
+
 ```
 ❌ screenshots/debug-*.png      # Debugging screenshots
 ❌ screenshots/test-*.png       # Testing screenshots
@@ -60,6 +64,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### When Screenshots ARE Okay
+
 ```
 ✅ docs/assets/ui-example.png   # Documentation assets
 ✅ screenshots/feature-demo.png # Demonstrating feature in PR description
@@ -67,6 +72,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 **Rule of Thumb**: Only include screenshots if they:
+
 1. Demonstrate a feature for the PR description
 2. Are part of documentation updates
 3. Would be useful to all users/developers
@@ -76,6 +82,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## Test Files (Situational)
 
 ### Temporary Test Files (NEVER Include)
+
 ```
 ❌ test-manual.js           # Manual testing scripts
 ❌ test-debug.ts            # Debugging tests
@@ -90,6 +97,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Proper Test Files (Include These)
+
 ```
 ✅ tests/feature.test.js    # Proper test suite
 ✅ tests/fixtures/data.json # Required test fixtures
@@ -99,6 +107,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 **Rule**: Only include tests that:
+
 1. Are part of the project's test suite structure
 2. Follow project's testing conventions
 3. Will be run by CI/other developers
@@ -109,6 +118,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## Build Artifacts & Dependencies
 
 ### Build Output
+
 ```
 ❌ dist/                    # Build output
 ❌ build/                   # Build directory
@@ -126,6 +136,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Dependencies
+
 ```
 ❌ node_modules/            # Node dependencies
 ❌ vendor/                  # Ruby/PHP dependencies
@@ -139,11 +150,13 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 **Lock File Rule**: Only include lock files if:
+
 - Project explicitly requires them (check CONTRIBUTING.md)
 - You're adding/updating dependencies
 - Project uses lock files (check existing files in repo)
 
 ### Cache & Temporary Build Files
+
 ```
 ❌ .cache/                  # Cache directory
 ❌ .tmp/                    # Temporary files
@@ -161,12 +174,14 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## IDE & Editor Files
 
 ### VS Code
+
 ```
 ❌ .vscode/                 # VS Code settings (use global gitignore)
 ❌ *.code-workspace         # Workspace files
 ```
 
 ### JetBrains (IntelliJ, WebStorm, etc.)
+
 ```
 ❌ .idea/                   # IntelliJ settings
 ❌ *.iml                    # Module files
@@ -175,6 +190,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Vim
+
 ```
 ❌ *.swp                    # Swap files
 ❌ *.swo                    # Swap files
@@ -183,6 +199,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Emacs
+
 ```
 ❌ *~                       # Backup files
 ❌ \#*\#                    # Auto-save files
@@ -190,6 +207,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Sublime Text
+
 ```
 ❌ *.sublime-project        # Project files
 ❌ *.sublime-workspace      # Workspace files
@@ -202,6 +220,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## Operating System Files
 
 ### macOS
+
 ```
 ❌ .DS_Store                # Finder metadata
 ❌ .AppleDouble              # Resource forks
@@ -210,6 +229,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Windows
+
 ```
 ❌ Thumbs.db                # Thumbnail cache
 ❌ ehthumbs.db              # Thumbnail cache
@@ -218,6 +238,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Linux
+
 ```
 ❌ .directory               # KDE directory settings
 ❌ .Trash-*/                # Trash directory
@@ -228,6 +249,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ## Secrets & Credentials (CRITICAL!)
 
 ### Environment Files
+
 ```
 ❌ .env                     # Environment variables (NEVER!)
 ❌ .env.local               # Local environment
@@ -239,6 +261,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Credentials
+
 ```
 ❌ credentials.json         # Credentials file
 ❌ secrets.json             # Secrets file
@@ -249,6 +272,7 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Keys & Certificates
+
 ```
 ❌ *.key                    # Private keys
 ❌ *.pem                    # PEM certificates
@@ -260,7 +284,9 @@ A comprehensive reference of files that should NEVER be included in open source 
 ```
 
 ### Password & Secret Patterns
+
 Look for these in file contents:
+
 ```
 ❌ password=
 ❌ api_key=
@@ -279,6 +305,7 @@ Look for these in file contents:
 ## Logs & Debugging
 
 ### Log Files
+
 ```
 ❌ *.log                    # Log files
 ❌ logs/                    # Logs directory
@@ -291,6 +318,7 @@ Look for these in file contents:
 ```
 
 ### Debug Files
+
 ```
 ❌ debug-*.js               # Debug scripts
 ❌ debug-*.py               # Debug scripts
@@ -301,6 +329,7 @@ Look for these in file contents:
 ```
 
 ### Crash Dumps
+
 ```
 ❌ core                     # Core dumps
 ❌ core.*                   # Core dumps
@@ -313,6 +342,7 @@ Look for these in file contents:
 ## Database & Data Files
 
 ### Database Files (Local Development)
+
 ```
 ❌ *.db                     # SQLite databases (local)
 ❌ *.sqlite                 # SQLite databases (local)
@@ -323,6 +353,7 @@ Look for these in file contents:
 ```
 
 ### Data Files (Local/Personal)
+
 ```
 ❌ data/local/              # Local data directory
 ❌ data/personal/           # Personal data
@@ -331,6 +362,7 @@ Look for these in file contents:
 ```
 
 **Exception**: Include database files if:
+
 - They're part of the project's test fixtures
 - They're example/seed data for the project
 - Project explicitly includes them (check existing repo)
@@ -340,6 +372,7 @@ Look for these in file contents:
 ## Coverage & Reports
 
 ### Test Coverage
+
 ```
 ❌ coverage/                # Coverage reports
 ❌ .coverage               # Coverage data
@@ -349,6 +382,7 @@ Look for these in file contents:
 ```
 
 ### Reports
+
 ```
 ❌ reports/                 # Generated reports
 ❌ test-results/            # Test results
@@ -362,17 +396,20 @@ Look for these in file contents:
 ## Version Control (Other Than Git)
 
 ### SVN
+
 ```
 ❌ .svn/                    # SVN metadata
 ```
 
 ### Mercurial
+
 ```
 ❌ .hg/                     # Mercurial metadata
 ❌ .hgignore                # Mercurial ignore
 ```
 
 ### CVS
+
 ```
 ❌ CVS/                     # CVS metadata
 ❌ .cvsignore               # CVS ignore
@@ -385,6 +422,7 @@ Look for these in file contents:
 For reference, these ARE okay to include:
 
 ### Source Code
+
 ```
 ✅ src/                     # Source code
 ✅ lib/                     # Library code (if source, not compiled)
@@ -394,6 +432,7 @@ For reference, these ARE okay to include:
 ```
 
 ### Tests
+
 ```
 ✅ tests/                   # Test directory
 ✅ __tests__/               # Jest tests
@@ -402,6 +441,7 @@ For reference, these ARE okay to include:
 ```
 
 ### Documentation
+
 ```
 ✅ README.md                # Project readme
 ✅ CHANGELOG.md             # Changelog
@@ -411,6 +451,7 @@ For reference, these ARE okay to include:
 ```
 
 ### Configuration (Project-level)
+
 ```
 ✅ .gitignore               # Git ignore rules
 ✅ .eslintrc                # ESLint config (if updating)
@@ -422,6 +463,7 @@ For reference, these ARE okay to include:
 ```
 
 ### CI/CD (if part of feature)
+
 ```
 ✅ .github/workflows/       # GitHub Actions
 ✅ .gitlab-ci.yml           # GitLab CI
@@ -430,6 +472,7 @@ For reference, these ARE okay to include:
 ```
 
 ### Migrations & Schema (if part of feature)
+
 ```
 ✅ migrations/              # Database migrations
 ✅ schema.sql               # Database schema (if adding to project)
@@ -441,7 +484,9 @@ For reference, these ARE okay to include:
 ## How to Prevent Including These Files
 
 ### 1. Project .gitignore
+
 Add patterns that benefit ALL developers:
+
 ```gitignore
 # Build
 dist/
@@ -463,7 +508,9 @@ vendor/
 ```
 
 ### 2. Global .gitignore (Recommended)
+
 Add personal/OS-specific patterns:
+
 ```bash
 # Configure global gitignore
 git config --global core.excludesfile ~/.gitignore_global
@@ -476,7 +523,9 @@ echo "*.swp" >> ~/.gitignore_global
 ```
 
 ### 3. Local Exclusions (.git/info/exclude)
+
 For patterns specific to YOUR workflow only:
+
 ```bash
 echo "SESSION.md" >> .git/info/exclude
 echo "NOTES.md" >> .git/info/exclude
@@ -485,6 +534,7 @@ echo "screenshots/debug-*" >> .git/info/exclude
 ```
 
 **Difference**:
+
 - `.gitignore` → Committed, affects everyone
 - `~/.gitignore_global` → Your global settings, affects all your repos
 - `.git/info/exclude` → This repo only, not committed
@@ -494,16 +544,19 @@ echo "screenshots/debug-*" >> .git/info/exclude
 ## Quick Check Commands
 
 ### List all tracked files:
+
 ```bash
 git ls-files
 ```
 
 ### Check for specific patterns:
+
 ```bash
 git ls-files | grep -E "SESSION|NOTES|TODO|planning"
 ```
 
 ### Find large files:
+
 ```bash
 git ls-files | while read file; do
   [ -f "$file" ] && stat -f%z "$file" "$file"
@@ -511,11 +564,13 @@ done | sort -rn | head -20
 ```
 
 ### Search for secrets in staged files:
+
 ```bash
 git diff --cached | grep -iE "password|secret|api[_-]?key|token"
 ```
 
 ### Use the pre-PR check script:
+
 ```bash
 ./scripts/pre-pr-check.sh
 ```

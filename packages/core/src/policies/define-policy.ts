@@ -4,32 +4,43 @@ import { ContextDefinition } from "../context/define-context.js";
 import { RuleDefinition } from "../rules/define-rule.js";
 import { PolicyStrategy, policySchema } from "./schema.js";
 
-type ExtractRuleName<T> = T extends RuleDefinition<infer _, infer N>
-    ? N extends string
-        ? N
-        : never
-    : T extends { name: infer N }
-    ? N extends string
-        ? N
-        : never
-    : never;
+type ExtractRuleName<T> =
+    T extends RuleDefinition<infer _, infer N>
+        ? N extends string
+            ? N
+            : never
+        : T extends { name: infer N }
+          ? N extends string
+              ? N
+              : never
+          : never;
 
-type RulesMap<TRules extends readonly RuleDefinition<ContextDefinition<z.ZodRawShape, Record<string, unknown>>, string>[]> = {
+type RulesMap<
+    TRules extends readonly RuleDefinition<
+        ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+        string
+    >[],
+> = {
     [K in ExtractRuleName<TRules[number]>]: Extract<TRules[number], { name: K }>;
 };
 
 type Extract<T, U> = T extends U ? T : never;
 
-type AnyRuleDefinition = RuleDefinition<ContextDefinition<z.ZodRawShape, Record<string, unknown>>, string>;
+type AnyRuleDefinition = RuleDefinition<
+    ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+    string
+>;
 
 export type PolicyDefinition<
     TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
     TName extends string,
-    TRules extends readonly RuleDefinition<TContext, string>[]
-> = Omit<z.infer<typeof policySchema>, 'name' | 'rules'> & {
+    TRules extends readonly RuleDefinition<TContext, string>[],
+> = Omit<z.infer<typeof policySchema>, "name" | "rules"> & {
     name: TName;
     rules: Map<string, TRules[number]> & {
-        get<K extends ExtractRuleName<TRules[number]>>(key: K): RulesMap<TRules & readonly AnyRuleDefinition[]>[K] | undefined;
+        get<K extends ExtractRuleName<TRules[number]>>(
+            key: K
+        ): RulesMap<TRules & readonly AnyRuleDefinition[]>[K] | undefined;
         has<K extends ExtractRuleName<TRules[number]>>(key: K): boolean;
     };
     context: TContext;
@@ -38,20 +49,20 @@ export type PolicyDefinition<
 export function definePolicy<
     TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
     TName extends string,
-    TRules extends readonly RuleDefinition<TContext, string>[]
+    TRules extends readonly RuleDefinition<TContext, string>[],
 >(
     context: TContext,
     name: TName,
     rules: TRules,
     options: {
-        defaultStrategy?: PolicyStrategy
+        defaultStrategy?: PolicyStrategy;
     } = {
-        defaultStrategy: 'preemptive'
+        defaultStrategy: "preemptive",
     }
 ): PolicyDefinition<TContext, TName, TRules> {
     const rulesMap = new Map<string, TRules[number]>();
     for (const rule of rules) {
-        if (rule && typeof rule === 'object' && 'name' in rule && 'evaluate' in rule) {
+        if (rule && typeof rule === "object" && "name" in rule && "evaluate" in rule) {
             rulesMap.set(rule.name, rule);
         }
     }
@@ -60,12 +71,10 @@ export function definePolicy<
         id: `policy:${normalizeId(name)}`,
         rules: rulesMap,
         context,
-        options:{
+        options: {
             defaultStrategy: options.defaultStrategy,
-        }
+        },
     }) as PolicyDefinition<TContext, TName, TRules>;
 
     return policy;
 }
-
-

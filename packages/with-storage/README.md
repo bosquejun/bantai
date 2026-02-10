@@ -21,22 +21,22 @@ yarn add @bantai-dev/with-storage @bantai-dev/core zod
 ## Quick Start
 
 ```typescript
-import { z } from 'zod';
-import { defineContext } from '@bantai-dev/core';
-import { withStorage, createMemoryStorage } from '@bantai-dev/with-storage';
+import { z } from "zod";
+import { defineContext } from "@bantai-dev/core";
+import { withStorage, createMemoryStorage } from "@bantai-dev/with-storage";
 
 // 1. Define your base context
 const appContext = defineContext(
-  z.object({
-    userId: z.string(),
-  })
+    z.object({
+        userId: z.string(),
+    })
 );
 
 // 2. Define storage schema
 const userDataSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  lastLogin: z.number(),
+    name: z.string(),
+    email: z.string().email(),
+    lastLogin: z.number(),
 });
 
 // 3. Create storage adapter
@@ -46,27 +46,23 @@ const storage = createMemoryStorage(userDataSchema);
 const contextWithStorage = withStorage(appContext, storage);
 
 // 5. Use storage in rules
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
-const userRule = defineRule(
-  contextWithStorage,
-  'check-user',
-  async (input, { tools }) => {
+const userRule = defineRule(contextWithStorage, "check-user", async (input, { tools }) => {
     const userData = await tools.storage.get(`user:${input.userId}`);
-    
+
     if (!userData) {
-      return deny({ reason: 'User not found' });
+        return deny({ reason: "User not found" });
     }
 
     // Update last login
     await tools.storage.set(`user:${input.userId}`, {
-      ...userData,
-      lastLogin: Date.now(),
+        ...userData,
+        lastLogin: Date.now(),
     });
 
-    return allow({ reason: 'User found and updated' });
-  }
-);
+    return allow({ reason: "User found and updated" });
+});
 ```
 
 ## Storage Adapter Interface
@@ -75,16 +71,16 @@ The `StorageAdapter` interface defines the contract for storage implementations:
 
 ```typescript
 interface StorageAdapter<T> {
-  get(key: string): Promise<T | undefined>;
-  set(key: string, value: T, ttlMs?: number): Promise<void>;
-  delete(key: string): Promise<void>;
-  update?(
-    key: string,
-    updater: (current: T | undefined) => {
-      value: T;
-      ttlMs?: number;
-    } | null
-  ): Promise<T | undefined>;
+    get(key: string): Promise<T | undefined>;
+    set(key: string, value: T, ttlMs?: number): Promise<void>;
+    delete(key: string): Promise<void>;
+    update?(
+        key: string,
+        updater: (current: T | undefined) => {
+            value: T;
+            ttlMs?: number;
+        } | null
+    ): Promise<T | undefined>;
 }
 ```
 
@@ -102,6 +98,7 @@ interface StorageAdapter<T> {
 Extends a Bantai context with storage capabilities. Adds the storage adapter to the context's tools.
 
 **Parameters:**
+
 - `context`: A Bantai context definition
 - `storage`: A storage adapter implementing `StorageAdapter<T>`
 
@@ -112,11 +109,13 @@ Extends a Bantai context with storage capabilities. Adds the storage adapter to 
 Creates an in-memory storage adapter for development and testing. Data is stored in a `Map` and is not persisted across restarts.
 
 **Parameters:**
+
 - `schema`: Zod schema for validating stored values
 
 **Returns:** `StorageAdapter<z.infer<T>>`
 
 **Features:**
+
 - Schema validation on read/write
 - Atomic updates with locking
 - TTL support (though memory storage doesn't auto-expire, TTL is stored for compatibility)
@@ -128,115 +127,91 @@ Creates an in-memory storage adapter for development and testing. Data is stored
 ### Basic Storage Usage
 
 ```typescript
-import { z } from 'zod';
-import { defineContext, defineRule } from '@bantai-dev/core';
-import { withStorage, createMemoryStorage } from '@bantai-dev/with-storage';
+import { z } from "zod";
+import { defineContext, defineRule } from "@bantai-dev/core";
+import { withStorage, createMemoryStorage } from "@bantai-dev/with-storage";
 
 const sessionSchema = z.object({
-  userId: z.string(),
-  expiresAt: z.number(),
+    userId: z.string(),
+    expiresAt: z.number(),
 });
 
 const storage = createMemoryStorage(sessionSchema);
-const context = withStorage(
-  defineContext(z.object({ sessionId: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ sessionId: z.string() })), storage);
 
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
-const sessionRule = defineRule(
-  context,
-  'check-session',
-  async (input, { tools }) => {
+const sessionRule = defineRule(context, "check-session", async (input, { tools }) => {
     const session = await tools.storage.get(input.sessionId);
-    
+
     if (!session) {
-      return deny({ reason: 'Session not found' });
+        return deny({ reason: "Session not found" });
     }
 
     if (session.expiresAt < Date.now()) {
-      await tools.storage.delete(input.sessionId);
-      return deny({ reason: 'Session expired' });
+        await tools.storage.delete(input.sessionId);
+        return deny({ reason: "Session expired" });
     }
 
-    return allow({ reason: 'Session valid' });
-  }
-);
+    return allow({ reason: "Session valid" });
+});
 ```
 
 ### Atomic Updates
 
 ```typescript
 const counterSchema = z.object({
-  count: z.number().int().min(0),
+    count: z.number().int().min(0),
 });
 
 const storage = createMemoryStorage(counterSchema);
-const context = withStorage(
-  defineContext(z.object({ counterKey: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ counterKey: z.string() })), storage);
 
-const incrementRule = defineRule(
-  context,
-  'increment-counter',
-  async (input, { tools }) => {
+const incrementRule = defineRule(context, "increment-counter", async (input, { tools }) => {
     // Atomic increment
-    const newValue = await tools.storage.update(
-      input.counterKey,
-      (current) => {
+    const newValue = await tools.storage.update(input.counterKey, (current) => {
         const count = current?.count || 0;
         return {
-          value: { count: count + 1 },
-          ttlMs: 3600000, // 1 hour
+            value: { count: count + 1 },
+            ttlMs: 3600000, // 1 hour
         };
-      }
-    );
+    });
 
     return allow({ reason: `Counter incremented to ${newValue?.count}` });
-  }
-);
+});
 ```
 
 ### TTL (Time-to-Live)
 
 ```typescript
 const cacheSchema = z.object({
-  data: z.string(),
-  cachedAt: z.number(),
+    data: z.string(),
+    cachedAt: z.number(),
 });
 
 const storage = createMemoryStorage(cacheSchema);
-const context = withStorage(
-  defineContext(z.object({ cacheKey: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ cacheKey: z.string() })), storage);
 
-const cacheRule = defineRule(
-  context,
-  'get-cached-data',
-  async (input, { tools }) => {
+const cacheRule = defineRule(context, "get-cached-data", async (input, { tools }) => {
     const cached = await tools.storage.get(input.cacheKey);
-    
+
     if (cached) {
-      return allow({ reason: 'Cache hit' });
+        return allow({ reason: "Cache hit" });
     }
 
     // Fetch and cache with 5 minute TTL
     const data = await fetchData();
     await tools.storage.set(
-      input.cacheKey,
-      {
-        data,
-        cachedAt: Date.now(),
-      },
-      5 * 60 * 1000 // 5 minutes
+        input.cacheKey,
+        {
+            data,
+            cachedAt: Date.now(),
+        },
+        5 * 60 * 1000 // 5 minutes
     );
 
-    return allow({ reason: 'Data fetched and cached' });
-  }
-);
+    return allow({ reason: "Data fetched and cached" });
+});
 ```
 
 ### Custom Storage Adapter
@@ -244,58 +219,55 @@ const cacheRule = defineRule(
 You can implement your own storage adapter for any backend:
 
 ```typescript
-import { StorageAdapter } from '@bantai-dev/with-storage';
-import { z } from 'zod';
+import { StorageAdapter } from "@bantai-dev/with-storage";
+import { z } from "zod";
 
 const userSchema = z.object({
-  name: z.string(),
-  email: z.string(),
+    name: z.string(),
+    email: z.string(),
 });
 
 // Example: Database storage adapter
 class DatabaseStorage implements StorageAdapter<z.infer<typeof userSchema>> {
-  async get(key: string) {
-    const record = await db.query('SELECT * FROM cache WHERE key = ?', [key]);
-    return record ? JSON.parse(record.value) : undefined;
-  }
-
-  async set(key: string, value: z.infer<typeof userSchema>, ttlMs?: number) {
-    const expiresAt = ttlMs ? Date.now() + ttlMs : null;
-    await db.query(
-      'INSERT INTO cache (key, value, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = ?, expires_at = ?',
-      [key, JSON.stringify(value), expiresAt, JSON.stringify(value), expiresAt]
-    );
-  }
-
-  async delete(key: string) {
-    await db.query('DELETE FROM cache WHERE key = ?', [key]);
-  }
-
-  async update(
-    key: string,
-    updater: (current: z.infer<typeof userSchema> | undefined) => {
-      value: z.infer<typeof userSchema>;
-      ttlMs?: number;
-    } | null
-  ) {
-    const current = await this.get(key);
-    const result = updater(current);
-    
-    if (result) {
-      await this.set(key, result.value, result.ttlMs);
-      return result.value;
-    } else {
-      await this.delete(key);
-      return current;
+    async get(key: string) {
+        const record = await db.query("SELECT * FROM cache WHERE key = ?", [key]);
+        return record ? JSON.parse(record.value) : undefined;
     }
-  }
+
+    async set(key: string, value: z.infer<typeof userSchema>, ttlMs?: number) {
+        const expiresAt = ttlMs ? Date.now() + ttlMs : null;
+        await db.query(
+            "INSERT INTO cache (key, value, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = ?, expires_at = ?",
+            [key, JSON.stringify(value), expiresAt, JSON.stringify(value), expiresAt]
+        );
+    }
+
+    async delete(key: string) {
+        await db.query("DELETE FROM cache WHERE key = ?", [key]);
+    }
+
+    async update(
+        key: string,
+        updater: (current: z.infer<typeof userSchema> | undefined) => {
+            value: z.infer<typeof userSchema>;
+            ttlMs?: number;
+        } | null
+    ) {
+        const current = await this.get(key);
+        const result = updater(current);
+
+        if (result) {
+            await this.set(key, result.value, result.ttlMs);
+            return result.value;
+        } else {
+            await this.delete(key);
+            return current;
+        }
+    }
 }
 
 const storage = new DatabaseStorage();
-const context = withStorage(
-  defineContext(z.object({ userId: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ userId: z.string() })), storage);
 ```
 
 ## Integration with Other Packages
@@ -305,8 +277,8 @@ const context = withStorage(
 The storage plugin is used by `@bantai-dev/with-rate-limit` to store rate limit counters:
 
 ```typescript
-import { createMemoryStorage } from '@bantai-dev/with-storage';
-import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
+import { createMemoryStorage } from "@bantai-dev/with-storage";
+import { withRateLimit, rateLimit } from "@bantai-dev/with-rate-limit";
 
 const storage = createMemoryStorage(rateLimit.storageSchema);
 const context = withRateLimit(baseContext, { storage });
@@ -317,13 +289,10 @@ const context = withRateLimit(baseContext, { storage });
 Use `@bantai-dev/storage-redis` for production Redis storage:
 
 ```typescript
-import { createRedisStorage } from '@bantai-dev/storage-redis';
-import { withStorage } from '@bantai-dev/with-storage';
+import { createRedisStorage } from "@bantai-dev/storage-redis";
+import { withStorage } from "@bantai-dev/with-storage";
 
-const redisStorage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  schema
-);
+const redisStorage = createRedisStorage({ url: process.env.REDIS_URL }, schema);
 
 const context = withStorage(baseContext, redisStorage);
 ```
@@ -352,4 +321,3 @@ The package provides full TypeScript type safety:
 ## License
 
 MIT
-

@@ -9,13 +9,20 @@ export type AuditSink = (event: AuditEvent) => void;
 
 export type AuditHandler = {
     emit: (event: BasicAuditEmitInput) => `event:${string}`;
-  };
+};
 
-export type BasicAuditEmitInput = Omit<AuditEvent, "evaluationId" | "policy" | 'id' | 'timestamp'>;
+export type BasicAuditEmitInput = Omit<AuditEvent, "evaluationId" | "policy" | "id" | "timestamp">;
 
-  export type CreateAuditEvent<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>, TName extends string, TRules extends readonly RuleDefinition<TContext, string>[]> = (policy: PolicyDefinition<TContext, TName, TRules>, evaluationId: string) => AuditHandler;
-  
+export type CreateAuditEvent<
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+    TName extends string,
+    TRules extends readonly RuleDefinition<TContext, string>[],
+> = (policy: PolicyDefinition<TContext, TName, TRules>, evaluationId: string) => AuditHandler;
 
-  export type AuditTool<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>, TName extends string, TRules extends readonly RuleDefinition<TContext, string>[]> = {
+export type AuditTool<
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+    TName extends string,
+    TRules extends readonly RuleDefinition<TContext, string>[],
+> = {
     createAuditEvent: CreateAuditEvent<TContext, TName, TRules>;
-  };
+};

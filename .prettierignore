@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+build
+.next
+out
+*.tsbuildinfo
+
+# Generated files
+coverage
+.nyc_output
+*.lcov
+
+# Logs
+*.log
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Turbo
+.turbo
+
+# Vercel
+.vercel
+
+
+.agent
+.agents
+.cursor
+

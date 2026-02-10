@@ -1,9 +1,9 @@
 ---
 name: open-source-contributions
 description: |
-  Create maintainer-friendly pull requests with clean code and professional communication. Prevents 16 common mistakes that cause PR rejection.
+    Create maintainer-friendly pull requests with clean code and professional communication. Prevents 16 common mistakes that cause PR rejection.
 
-  Use when: contributing to open source, submitting PRs, or troubleshooting PR rejection, CI failures, or personal artifacts in commits.
+    Use when: contributing to open source, submitting PRs, or troubleshooting PR rejection, CI failures, or personal artifacts in commits.
 user-invocable: true
 ---
 
@@ -26,6 +26,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ### Personal Development Artifacts (NEVER Include)
 
 **Planning & Notes Documents:**
+
 ```
 ❌ SESSION.md              # Session tracking notes
 ❌ NOTES.md                # Personal development notes
@@ -40,6 +41,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ```
 
 **Screenshots & Visual Assets:**
+
 ```
 ❌ screenshots/debug-*.png     # Debugging screenshots
 ❌ screenshots/test-*.png      # Testing screenshots
@@ -52,6 +54,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ```
 
 **Test Files (Situational):**
+
 ```
 ❌ test-manual.js          # Manual testing scripts
 ❌ test-debug.ts           # Debugging test files
@@ -65,6 +68,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ```
 
 **Build & Dependencies:**
+
 ```
 ❌ node_modules/           # Dependencies (in .gitignore)
 ❌ dist/                   # Build output (in .gitignore)
@@ -75,6 +79,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ```
 
 **IDE & OS Files:**
+
 ```
 ❌ .vscode/                # VS Code settings
 ❌ .idea/                  # IntelliJ settings
@@ -85,6 +90,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ```
 
 **Secrets & Sensitive Data:**
+
 ```
 ❌ .env                    # Environment variables (NEVER!)
 ❌ .env.local              # Local environment config
@@ -95,6 +101,7 @@ Create maintainer-friendly PRs while avoiding the 16 common mistakes that cause 
 ```
 
 **Temporary & Debug Files:**
+
 ```
 ❌ temp/*                  # Temporary files
 ❌ tmp/*                   # Temporary directory
@@ -131,7 +138,8 @@ Use the bundled `scripts/pre-pr-check.sh` to scan for artifacts:
 ```
 
 **What it checks:**
-- Personal documents (SESSION.md, planning/*, NOTES.md)
+
+- Personal documents (SESSION.md, planning/\*, NOTES.md)
 - Screenshots not referenced in PR description
 - Temporary test files
 - Large files (>1MB)
@@ -147,6 +155,7 @@ git diff --stat
 ```
 
 **Ask yourself:**
+
 - Is every file change necessary for THIS feature/fix?
 - Are there any unrelated changes?
 - Are there files I added during development but don't need?
@@ -154,6 +163,7 @@ git diff --stat
 ### Step 3: Clean Personal Artifacts
 
 **Manual removal:**
+
 ```bash
 git rm --cached SESSION.md
 git rm --cached -r planning/
@@ -162,6 +172,7 @@ git rm --cached test-manual.js
 ```
 
 **Or use the clean script:**
+
 ```bash
 ./scripts/clean-branch.sh
 ```
@@ -169,6 +180,7 @@ git rm --cached test-manual.js
 ### Step 4: Update .gitignore
 
 Add personal patterns to `.git/info/exclude` (affects only YOUR checkout):
+
 ```
 # Personal development artifacts
 SESSION.md
@@ -190,28 +202,33 @@ scratch.*
 
 ```markdown
 ## What?
+
 [Brief description of what this PR does]
 
 ## Why?
+
 [Explain the reasoning, business value, or problem being solved]
 
 ## How?
+
 [Describe the implementation approach and key decisions]
 
 ## Testing
+
 [Step-by-step instructions for reviewers to test]
 
 ## Checklist
+
 - [ ] Tests added/updated
 - [ ] Documentation updated
 - [ ] CI passing
 - [ ] Breaking changes documented
 
 ## Related Issues
+
 Closes #123
 Relates to #456
 ```
-
 
 ### Commit Message Format
 
@@ -228,21 +245,23 @@ See `references/commit-message-guide.md` for complete guide.
 ## PR Sizing Best Practices
 
 **Research-backed guidelines:**
+
 - **Ideal**: 50 lines
 - **Good**: <200 lines
 - **Maximum**: 400 lines
 - **Beyond 400**: Defect detection drops significantly
 
 **Keep PRs small:**
+
 - One change per PR
 - Use feature flags for incomplete work:
-  ```typescript
-  if (featureFlags.newAuth) {
-    // New OAuth flow (incomplete but behind flag)
-  } else {
-    // Existing flow
-  }
-  ```
+    ```typescript
+    if (featureFlags.newAuth) {
+        // New OAuth flow (incomplete but behind flag)
+    } else {
+        // Existing flow
+    }
+    ```
 - Break by layer: schema → API → frontend → tests
 
 ---
@@ -250,19 +269,21 @@ See `references/commit-message-guide.md` for complete guide.
 ## Following Project Conventions
 
 **Before contributing:**
+
 1. Read CONTRIBUTING.md (check `/`, `/.github/`, `/docs/`)
 2. Run formatters: `npm run lint`, `npm run format`
 3. Match existing patterns (review recent merged PRs)
 4. Test before submitting:
-   ```bash
-   npm test && npm run lint && npm run build
-   ```
+    ```bash
+    npm test && npm run lint && npm run build
+    ```
 
 ---
 
 ## Communication Best Practices
 
 **Response templates:**
+
 - Implemented: "Good idea! Implemented in [commit hash]"
 - Disagreement: "I see your point. I went with X because Y. Open to alternatives."
 - Clarification: "Could you help me understand what you mean by Z?"
@@ -275,7 +296,7 @@ See `references/commit-message-guide.md` for complete guide.
 **See Critical Workflow Rules section for detailed guidance on Rules 1-3**
 
 1. **Not Reading CONTRIBUTING.md** - ALWAYS read first, follow exactly
-2. **Including Personal Artifacts** - SESSION.md, planning/*, screenshots, temp tests (use pre-PR check script)
+2. **Including Personal Artifacts** - SESSION.md, planning/\*, screenshots, temp tests (use pre-PR check script)
 3. **Massive Pull Requests** - Break into <200 lines ideal, <400 max
 4. **Not Testing Before Submitting** - Run full test suite, test manually, capture evidence (violates RULE 2)
 5. **Working on Assigned Issues** - Check assignments, comment to claim work
@@ -315,20 +336,25 @@ git commit -m "feat(auth): add OAuth support"
 **RULE 2: Test Thoroughly BEFORE Submitting PR**
 
 Never submit without:
+
 1. Running full test suite: `npm test && npm run lint && npm run build`
 2. Testing manually (run app, test feature, edge cases)
 3. Capturing evidence (screenshots/videos for visual changes - add to PR description, NOT commits)
 4. Checking CI will pass
 
 **Testing checklist template:**
+
 ```markdown
 ## Testing Performed
+
 ### Automated Tests
+
 - ✅ All existing tests pass
 - ✅ Added 12 new tests for OAuth flow
 - ✅ Coverage increased from 85% to 87%
 
 ### Manual Testing
+
 - ✅ Tested Google/GitHub OAuth flows end-to-end
 - ✅ Verified error handling
 - ✅ Tested on Chrome, Firefox, Safari
@@ -346,11 +372,13 @@ Never submit without:
 - Too large: >800 lines (split it)
 
 **Keep focused:**
+
 - Plan: What ONE thing does this PR do?
 - During dev: Unrelated bug? Separate branch
 - Before commit: `git diff` - Is every change necessary for THIS feature?
 
 **Break large features into phases:**
+
 ```
 PR #1: Database schema and models
 PR #2: API endpoints
@@ -368,12 +396,14 @@ PR #4: Integration and tests
 ### Linking Issues
 
 **Auto-closing keywords** (in PR description):
+
 ```markdown
 Closes #123
 Fixes #456
 Resolves #789
 
 # Multiple: Fixes #10, closes #20, resolves #30
+
 # Cross-repo: Fixes owner/repo#123
 ```
 
@@ -394,11 +424,13 @@ gh pr ready                            # Mark draft as ready
 See `references/pr-checklist.md` for complete version.
 
 **Pre-Contribution:**
+
 - [ ] Read CONTRIBUTING.md, CODE_OF_CONDUCT.md
 - [ ] Commented on issue to claim work
 - [ ] Created feature branch (NEVER work on main)
 
 **Development:**
+
 - [ ] **RULE 1**: Working on feature branch
 - [ ] **RULE 2**: Tested thoroughly with evidence
 - [ ] **RULE 3**: PR focused on single feature
@@ -406,11 +438,13 @@ See `references/pr-checklist.md` for complete version.
 - [ ] Updated documentation
 
 **Cleanup:**
+
 - [ ] Ran `./scripts/pre-pr-check.sh`
-- [ ] No personal artifacts (SESSION.md, planning/*, debug screenshots, temp tests)
+- [ ] No personal artifacts (SESSION.md, planning/\*, debug screenshots, temp tests)
 - [ ] No secrets (.env, credentials)
 
 **PR Quality:**
+
 - [ ] Focused on one change (<200 lines ideal, <400 max)
 - [ ] Title: Conventional Commits format
 - [ ] Description: What/Why/How structure
@@ -418,6 +452,7 @@ See `references/pr-checklist.md` for complete version.
 - [ ] Screenshots for visual changes (in PR description)
 
 **Post-Submission:**
+
 - [ ] Monitor CI, fix failures immediately
 - [ ] Respond to feedback promptly
 
@@ -426,6 +461,7 @@ See `references/pr-checklist.md` for complete version.
 ## Bundled Resources
 
 See bundled examples and scripts:
+
 - `scripts/pre-pr-check.sh` - Scan for artifacts before submission
 - `scripts/clean-branch.sh` - Remove common personal artifacts
 - `references/pr-template.md` - PR description template
@@ -441,7 +477,7 @@ See bundled examples and scripts:
 1. **RULE 1**: ALWAYS use feature branches (never main)
 2. **RULE 2**: Test thoroughly before submitting (automated + manual + evidence)
 3. **RULE 3**: Keep PRs focused (<200 lines ideal, one change per PR)
-4. **Clean PRs**: Remove personal artifacts (SESSION.md, planning/*, debug screenshots)
+4. **Clean PRs**: Remove personal artifacts (SESSION.md, planning/\*, debug screenshots)
 5. **Read CONTRIBUTING.md**: Always read first, follow exactly
 6. **Link Issues**: Use "Closes #123" to auto-close
 7. **Use `./scripts/pre-pr-check.sh`**: Scan for artifacts before submission

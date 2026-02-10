@@ -1,29 +1,29 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+    entry: ["src/index.ts"],
 
-  format: ['esm'],
-  target: 'es2022',
+    format: ["esm"],
+    target: "es2022",
 
-  dts: true,
-  sourcemap: true,
-  clean: true,
+    dts: true,
+    sourcemap: true,
+    clean: true,
 
-  outDir: 'dist',
+    outDir: "dist",
 
-  // Bundle everything into one file
-  bundle: true,
-  splitting: false,
-  treeshake: true,
+    // Bundle everything into one file
+    bundle: true,
+    splitting: false,
+    treeshake: true,
 
-  // Do NOT bundle deps like zod
-  external: ['zod'],
+    // Do NOT bundle deps like zod
+    external: ["zod"],
 
-  // Single output file
-  outExtension() {
-    return {
-      js: '.js',
-    };
-  },
+    // Single output file
+    outExtension() {
+        return {
+            js: ".js",
+        };
+    },
 });

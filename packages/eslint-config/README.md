@@ -29,12 +29,13 @@ Base ESLint configuration for TypeScript projects. Includes:
 
 ```javascript
 // eslint.config.js
-import { config } from '@bantai-dev/eslint-config/base';
+import { config } from "@bantai-dev/eslint-config/base";
 
 export default config;
 ```
 
 **Features:**
+
 - TypeScript support
 - Prettier compatibility
 - Turbo monorepo rules
@@ -53,12 +54,13 @@ ESLint configuration for Next.js applications. Extends the base configuration an
 
 ```javascript
 // eslint.config.js
-import { nextJsConfig } from '@bantai-dev/eslint-config/next-js';
+import { nextJsConfig } from "@bantai-dev/eslint-config/next-js";
 
 export default nextJsConfig;
 ```
 
 **Features:**
+
 - All base configuration features
 - Next.js specific rules
 - React Hooks rules
@@ -77,12 +79,13 @@ ESLint configuration for React libraries. Extends the base configuration and add
 
 ```javascript
 // eslint.config.js
-import { config } from '@bantai-dev/eslint-config/react-internal';
+import { config } from "@bantai-dev/eslint-config/react-internal";
 
 export default config;
 ```
 
 **Features:**
+
 - All base configuration features
 - React recommended rules
 - React Hooks rules
@@ -97,7 +100,7 @@ For a TypeScript package in the monorepo:
 
 ```javascript
 // packages/my-package/eslint.config.js
-import { config } from '@bantai-dev/eslint-config/base';
+import { config } from "@bantai-dev/eslint-config/base";
 
 export default config;
 ```
@@ -108,7 +111,7 @@ For a Next.js application:
 
 ```javascript
 // apps/my-app/eslint.config.js
-import { nextJsConfig } from '@bantai-dev/eslint-config/next-js';
+import { nextJsConfig } from "@bantai-dev/eslint-config/next-js";
 
 export default nextJsConfig;
 ```
@@ -119,7 +122,7 @@ For a React component library:
 
 ```javascript
 // packages/ui-components/eslint.config.js
-import { config } from '@bantai-dev/eslint-config/react-internal';
+import { config } from "@bantai-dev/eslint-config/react-internal";
 
 export default config;
 ```
@@ -130,16 +133,16 @@ You can extend any configuration with additional rules:
 
 ```javascript
 // eslint.config.js
-import { config } from '@bantai-dev/eslint-config/base';
+import { config } from "@bantai-dev/eslint-config/base";
 
 export default [
-  ...config,
-  {
-    rules: {
-      // Your custom rules
-      'no-console': 'warn',
+    ...config,
+    {
+        rules: {
+            // Your custom rules
+            "no-console": "warn",
+        },
     },
-  },
 ];
 ```
 

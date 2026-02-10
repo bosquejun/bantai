@@ -21,51 +21,40 @@ yarn add @bantai-dev/storage-redis @bantai-dev/with-storage @bantai-dev/core ior
 ## Quick Start
 
 ```typescript
-import { z } from 'zod';
-import { defineContext } from '@bantai-dev/core';
-import { withStorage } from '@bantai-dev/with-storage';
-import { createRedisStorage } from '@bantai-dev/storage-redis';
+import { z } from "zod";
+import { defineContext } from "@bantai-dev/core";
+import { withStorage } from "@bantai-dev/with-storage";
+import { createRedisStorage } from "@bantai-dev/storage-redis";
 
 // 1. Define your schema
 const userDataSchema = z.object({
-  userId: z.string(),
-  name: z.string(),
-  lastLogin: z.number(),
+    userId: z.string(),
+    name: z.string(),
+    lastLogin: z.number(),
 });
 
 // 2. Create Redis storage adapter
-const storage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  userDataSchema,
-  {
-    prefix: 'app:',
+const storage = createRedisStorage({ url: process.env.REDIS_URL }, userDataSchema, {
+    prefix: "app:",
     lockTimeoutMs: 5000,
     lockTTLMs: 10000,
-  }
-);
+});
 
 // 3. Use with Bantai context
-const context = withStorage(
-  defineContext(z.object({ userId: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ userId: z.string() })), storage);
 
 // 4. Use in rules
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
-const userRule = defineRule(
-  context,
-  'get-user',
-  async (input, { tools }) => {
+const userRule = defineRule(context, "get-user", async (input, { tools }) => {
     const user = await tools.storage.get(`user:${input.userId}`);
-    
+
     if (!user) {
-      return deny({ reason: 'User not found' });
+        return deny({ reason: "User not found" });
     }
 
     return allow({ reason: `User: ${user.name}` });
-  }
-);
+});
 ```
 
 ## Features
@@ -86,14 +75,14 @@ Creates a Redis storage adapter that implements the `StorageAdapter` interface.
 **Parameters:**
 
 - `redis`: Redis connection options
-  - `client?`: Existing ioredis client instance
-  - `url?`: Redis connection URL (e.g., `redis://localhost:6379`)
+    - `client?`: Existing ioredis client instance
+    - `url?`: Redis connection URL (e.g., `redis://localhost:6379`)
 - `schema`: Zod schema for validating stored values
 - `options?`: Configuration options
-  - `prefix?`: Key prefix for all operations (default: `""`)
-  - `lockTimeoutMs?`: Maximum time to wait for lock acquisition (default: `5000`)
-  - `lockTTLMs?`: TTL for lock keys (default: `10000`, must be >= `lockTimeoutMs`)
-  - `lockRetryMs?`: Sleep time between lock retry attempts (default: `50`)
+    - `prefix?`: Key prefix for all operations (default: `""`)
+    - `lockTimeoutMs?`: Maximum time to wait for lock acquisition (default: `5000`)
+    - `lockTTLMs?`: TTL for lock keys (default: `10000`, must be >= `lockTimeoutMs`)
+    - `lockRetryMs?`: Sleep time between lock retry attempts (default: `50`)
 
 **Returns:** `StorageAdapter<z.infer<T>>`
 
@@ -102,36 +91,27 @@ Creates a Redis storage adapter that implements the `StorageAdapter` interface.
 ### Using Redis URL
 
 ```typescript
-const storage = createRedisStorage(
-  { url: 'redis://localhost:6379' },
-  schema
-);
+const storage = createRedisStorage({ url: "redis://localhost:6379" }, schema);
 ```
 
 ### Using Existing Client
 
 ```typescript
-import Redis from 'ioredis';
+import Redis from "ioredis";
 
 const client = new Redis({
-  host: 'localhost',
-  port: 6379,
-  password: 'your-password',
+    host: "localhost",
+    port: 6379,
+    password: "your-password",
 });
 
-const storage = createRedisStorage(
-  { client },
-  schema
-);
+const storage = createRedisStorage({ client }, schema);
 ```
 
 ### With Authentication
 
 ```typescript
-const storage = createRedisStorage(
-  { url: 'redis://:password@localhost:6379' },
-  schema
-);
+const storage = createRedisStorage({ url: "redis://:password@localhost:6379" }, schema);
 ```
 
 ## Configuration Options
@@ -141,16 +121,12 @@ const storage = createRedisStorage(
 Add a prefix to all keys for namespacing:
 
 ```typescript
-const storage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  schema,
-  {
-    prefix: 'myapp:',
-  }
-);
+const storage = createRedisStorage({ url: process.env.REDIS_URL }, schema, {
+    prefix: "myapp:",
+});
 
 // Keys will be stored as: myapp:user:123
-await storage.set('user:123', data);
+await storage.set("user:123", data);
 ```
 
 ### Lock Settings
@@ -158,15 +134,11 @@ await storage.set('user:123', data);
 Configure distributed locking behavior:
 
 ```typescript
-const storage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  schema,
-  {
-    lockTimeoutMs: 10000,  // Wait up to 10s for lock
-    lockTTLMs: 20000,      // Lock expires after 20s
-    lockRetryMs: 100,       // Retry every 100ms
-  }
-);
+const storage = createRedisStorage({ url: process.env.REDIS_URL }, schema, {
+    lockTimeoutMs: 10000, // Wait up to 10s for lock
+    lockTTLMs: 20000, // Lock expires after 20s
+    lockRetryMs: 100, // Retry every 100ms
+});
 ```
 
 **Important**: `lockTTLMs` should be greater than `lockTimeoutMs` to prevent lock expiration during normal operations.
@@ -176,46 +148,36 @@ const storage = createRedisStorage(
 ### Basic Usage
 
 ```typescript
-import { z } from 'zod';
-import { defineContext, defineRule } from '@bantai-dev/core';
-import { withStorage } from '@bantai-dev/with-storage';
-import { createRedisStorage } from '@bantai-dev/storage-redis';
+import { z } from "zod";
+import { defineContext, defineRule } from "@bantai-dev/core";
+import { withStorage } from "@bantai-dev/with-storage";
+import { createRedisStorage } from "@bantai-dev/storage-redis";
 
 const sessionSchema = z.object({
-  userId: z.string(),
-  expiresAt: z.number(),
+    userId: z.string(),
+    expiresAt: z.number(),
 });
 
-const storage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  sessionSchema
-);
+const storage = createRedisStorage({ url: process.env.REDIS_URL }, sessionSchema);
 
-const context = withStorage(
-  defineContext(z.object({ sessionId: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ sessionId: z.string() })), storage);
 
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
-const sessionRule = defineRule(
-  context,
-  'check-session',
-  async (input, { tools }) => {
+const sessionRule = defineRule(context, "check-session", async (input, { tools }) => {
     const session = await tools.storage.get(input.sessionId);
-    
+
     if (!session) {
-      return deny({ reason: 'Session not found' });
+        return deny({ reason: "Session not found" });
     }
 
     if (session.expiresAt < Date.now()) {
-      await tools.storage.delete(input.sessionId);
-      return deny({ reason: 'Session expired' });
+        await tools.storage.delete(input.sessionId);
+        return deny({ reason: "Session expired" });
     }
 
-    return allow({ reason: 'Session valid' });
-  }
-);
+    return allow({ reason: "Session valid" });
+});
 ```
 
 ### Atomic Updates
@@ -224,38 +186,25 @@ The Redis adapter provides atomic updates using distributed locking:
 
 ```typescript
 const counterSchema = z.object({
-  count: z.number().int().min(0),
+    count: z.number().int().min(0),
 });
 
-const storage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  counterSchema
-);
+const storage = createRedisStorage({ url: process.env.REDIS_URL }, counterSchema);
 
-const context = withStorage(
-  defineContext(z.object({ counterKey: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ counterKey: z.string() })), storage);
 
-const incrementRule = defineRule(
-  context,
-  'increment',
-  async (input, { tools }) => {
+const incrementRule = defineRule(context, "increment", async (input, { tools }) => {
     // Atomic increment - safe for concurrent access
-    const newValue = await tools.storage.update(
-      input.counterKey,
-      (current) => {
+    const newValue = await tools.storage.update(input.counterKey, (current) => {
         const count = current?.count || 0;
         return {
-          value: { count: count + 1 },
-          ttlMs: 3600000, // 1 hour
+            value: { count: count + 1 },
+            ttlMs: 3600000, // 1 hour
         };
-      }
-    );
+    });
 
     return allow({ reason: `Counter: ${newValue?.count}` });
-  }
-);
+});
 ```
 
 ### TTL (Time-to-Live)
@@ -264,44 +213,34 @@ Set expiration times for cached data:
 
 ```typescript
 const cacheSchema = z.object({
-  data: z.string(),
-  cachedAt: z.number(),
+    data: z.string(),
+    cachedAt: z.number(),
 });
 
-const storage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  cacheSchema
-);
+const storage = createRedisStorage({ url: process.env.REDIS_URL }, cacheSchema);
 
-const context = withStorage(
-  defineContext(z.object({ cacheKey: z.string() })),
-  storage
-);
+const context = withStorage(defineContext(z.object({ cacheKey: z.string() })), storage);
 
-const cacheRule = defineRule(
-  context,
-  'get-cached',
-  async (input, { tools }) => {
+const cacheRule = defineRule(context, "get-cached", async (input, { tools }) => {
     const cached = await tools.storage.get(input.cacheKey);
-    
+
     if (cached) {
-      return allow({ reason: 'Cache hit' });
+        return allow({ reason: "Cache hit" });
     }
 
     // Fetch and cache with 5 minute TTL
     const data = await fetchData();
     await tools.storage.set(
-      input.cacheKey,
-      {
-        data,
-        cachedAt: Date.now(),
-      },
-      5 * 60 * 1000 // 5 minutes - Redis will auto-expire
+        input.cacheKey,
+        {
+            data,
+            cachedAt: Date.now(),
+        },
+        5 * 60 * 1000 // 5 minutes - Redis will auto-expire
     );
 
-    return allow({ reason: 'Data cached' });
-  }
-);
+    return allow({ reason: "Data cached" });
+});
 ```
 
 ### Integration with Rate Limiting
@@ -309,19 +248,15 @@ const cacheRule = defineRule(
 Perfect for production rate limiting:
 
 ```typescript
-import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
-import { createRedisStorage } from '@bantai-dev/storage-redis';
+import { withRateLimit, rateLimit } from "@bantai-dev/with-rate-limit";
+import { createRedisStorage } from "@bantai-dev/storage-redis";
 
-const redisStorage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  rateLimit.storageSchema,
-  {
-    prefix: 'ratelimit:',
-  }
-);
+const redisStorage = createRedisStorage({ url: process.env.REDIS_URL }, rateLimit.storageSchema, {
+    prefix: "ratelimit:",
+});
 
 const rateLimitedContext = withRateLimit(baseContext, {
-  storage: redisStorage,
+    storage: redisStorage,
 });
 ```
 
@@ -341,11 +276,11 @@ If a lock cannot be acquired within `lockTimeoutMs`, an error is thrown:
 
 ```typescript
 try {
-  await storage.update(key, updater);
+    await storage.update(key, updater);
 } catch (error) {
-  if (error.message.includes('Failed to acquire lock')) {
-    // Handle lock timeout - retry or fail gracefully
-  }
+    if (error.message.includes("Failed to acquire lock")) {
+        // Handle lock timeout - retry or fail gracefully
+    }
 }
 ```
 
@@ -359,13 +294,13 @@ The adapter throws errors in the following cases:
 
 ```typescript
 try {
-  await storage.set(key, value);
+    await storage.set(key, value);
 } catch (error) {
-  if (error.message.includes('Failed to acquire lock')) {
-    // Retry logic
-  } else {
-    // Other Redis errors
-  }
+    if (error.message.includes("Failed to acquire lock")) {
+        // Retry logic
+    } else {
+        // Other Redis errors
+    }
 }
 ```
 
@@ -385,28 +320,24 @@ try {
 5. **Handle Errors**: Implement retry logic for transient failures
 
 ```typescript
-import Redis from 'ioredis';
+import Redis from "ioredis";
 
 const client = new Redis({
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
+    host: process.env.REDIS_HOST,
+    port: parseInt(process.env.REDIS_PORT || "6379"),
+    password: process.env.REDIS_PASSWORD,
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => {
+        const delay = Math.min(times * 50, 2000);
+        return delay;
+    },
 });
 
-const storage = createRedisStorage(
-  { client },
-  schema,
-  {
-    prefix: 'prod:',
+const storage = createRedisStorage({ client }, schema, {
+    prefix: "prod:",
     lockTimeoutMs: 10000,
     lockTTLMs: 20000,
-  }
-);
+});
 ```
 
 ## Requirements
@@ -428,4 +359,3 @@ const storage = createRedisStorage(
 ## License
 
 MIT
-
