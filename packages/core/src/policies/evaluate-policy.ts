@@ -3,215 +3,237 @@ import { z } from "zod";
 import { auditPolicyMetaSchema } from "../audit/schema.js";
 import { AuditEvent, AuditTool } from "../audit/types.js";
 import { ContextDefinition } from "../context/define-context.js";
-import { RuleDefinition } from "../rules/define-rule.js";
+import {
+	ExtractTools,
+	RuleDefinition,
+	RuleEvalContext,
+} from "../rules/define-rule.js";
 import { RuleResult, deny } from "../rules/results.js";
 import { ruleSchema } from "../rules/schema.js";
 import { PolicyDefinition } from "./define-policy.js";
 import { PolicyResult, PolicyStrategy, policyResultSchema } from "./schema.js";
 
-type ExtractContextInput<TContext> = TContext extends ContextDefinition<infer S>
-    ? S extends z.ZodRawShape
-        ? z.infer<z.ZodObject<S>>
-        : never
-    : never;
-
-type ExtractPolicyContext<TPolicy> = TPolicy extends { context: infer TContext }
-    ? TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>
-        ? ExtractContextInput<TContext>
-        : never
-    : never;
-
-type ExtractRuleFromPolicy<TPolicy> = TPolicy extends PolicyDefinition<infer TContext, any, any>
-    ? TPolicy['rules'] extends Map<string, infer R>
-        ? R extends RuleDefinition<TContext, string>
-            ? R
-            : never
-        : never
-    : never;
+type ExtractContextInput<TContext> =
+	TContext extends ContextDefinition<infer S>
+		? S extends z.ZodRawShape
+			? z.infer<z.ZodObject<S>>
+			: never
+		: never;
 
 export async function evaluatePolicy<
-    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
-    TPolicy extends PolicyDefinition<TContext, any, any>
+	TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
+	TName extends string,
+	TRules extends readonly RuleDefinition<TContext, string>[],
 >(
-    policy: TPolicy,
-    input: ExtractPolicyContext<TPolicy>,
-    options?: {
-        strategy?: PolicyStrategy
-    } 
+	policy: PolicyDefinition<TContext, TName, TRules>,
+	input: ExtractContextInput<TContext>,
+	options?: {
+		strategy?: PolicyStrategy;
+	}
 ): Promise<PolicyResult> {
-    const inputData = {
-        ...(policy.context.defaultValues || {}),
-        ...input,
-    }
+	const inputData = {
+		...(policy.context.defaultValues || {}),
+		...input,
+	};
 
+	const evaluationId = generateId("eval");
 
-    const evaluationId = generateId('eval');
-    
-    const inputValue = policy.context.schema.parse(inputData) as z.infer<typeof policy.context.schema> & {
-        audit?: Partial<Pick<AuditEvent, 'trace'>>
-    }
+	const inputValue = policy.context.schema.parse(inputData) as z.infer<
+		typeof policy.context.schema
+	> & {
+		audit?: Partial<Pick<AuditEvent, "trace">>;
+	};
 
-    const ctx = { tools: policy.context.tools as { audit?:  AuditTool<TContext, TPolicy['name'], ExtractRuleFromPolicy<TPolicy>[]> } };
+	const ctx: RuleEvalContext<TContext> = {
+		tools: policy.context.tools as unknown as ExtractTools<TContext>,
+	};
 
-    const event = ctx.tools.audit?.createAuditEvent(policy, evaluationId);
+	const auditTool = (
+		policy.context.tools as { audit?: AuditTool<TContext, TName, TRules> }
+	).audit;
+	const event = auditTool?.createAuditEvent(policy, evaluationId);
 
+	const violatedRules: PolicyResult["violatedRules"] = [];
+	const strategy =
+		options?.strategy || policy.options?.defaultStrategy || "preemptive";
 
-    const violatedRules:PolicyResult['violatedRules'] = [];
-    const strategy = options?.strategy || policy.options?.defaultStrategy || 'preemptive';
+	const evalPolicyMeta = auditPolicyMetaSchema.parse({
+		strategy,
+	});
 
+	const policyStartTimestamp = Date.now();
 
-    const evalPolicyMeta= auditPolicyMetaSchema.parse({
-        strategy,
-    });
+	const policyStartEventId = event?.emit({
+		type: "policy.start",
+		trace: inputValue.audit?.trace,
+		meta: evalPolicyMeta,
+	});
 
-    const policyStartTimestamp = Date.now();
+	// Store all rule evaluation results (rule instance and result)
+	type RuleType = TRules[number];
+	const evaluatedRules: Array<{ rule: RuleType; result: RuleResult }> = [];
 
-    const policyStartEventId =event?.emit({
-        type: "policy.start",
-        trace: inputValue.audit?.trace,
-        meta: evalPolicyMeta,
-    });
+	const createResult = ({
+		decision,
+		reason,
+	}: Pick<PolicyResult, "decision" | "reason">) => {
+		const result = policyResultSchema.parse({
+			decision,
+			isAllowed: decision === "allow",
+			reason,
+			violatedRules,
+			evaluatedRules: evaluatedRules.map(({ rule, result }) => ({
+				rule: rule as z.infer<typeof ruleSchema>,
+				result,
+			})),
+			evaluationId,
+			strategy: strategy,
+		});
 
-    // Store all rule evaluation results (rule instance and result)
-    type RuleType = ExtractRuleFromPolicy<TPolicy>;
-    const evaluatedRules: Array<{ rule: RuleType; result: RuleResult }> = [];
+		event?.emit({
+			type: "policy.decision",
+			decision: {
+				outcome: result.isAllowed ? "allow" : "deny",
+				reason: result.reason,
+			},
+			trace: inputValue.audit?.trace,
+			meta: evalPolicyMeta,
+			parentId: policyStartEventId,
+		});
 
-    const createResult = ({decision, reason}: Pick<PolicyResult, 'decision' | 'reason'>) => {
-        const result = policyResultSchema.parse({
-            decision,
-            isAllowed: decision === 'allow',
-            reason,
-            violatedRules,
-            evaluatedRules: evaluatedRules.map(({ rule, result }) => ({
-                rule: rule as z.infer<typeof ruleSchema>,
-                result,
-            })),
-            evaluationId,
-            strategy: strategy,
-        });
+		event?.emit({
+			type: "policy.end",
+			trace: inputValue.audit?.trace,
+			durationMs: Date.now() - policyStartTimestamp,
+			meta: evalPolicyMeta,
+			parentId: policyStartEventId,
+		});
 
-        event?.emit({
-            type:'policy.decision',
-            decision: {
-                outcome: result.isAllowed ? 'allow' : 'deny',
-                reason: result.reason,
-            },
-            trace: inputValue.audit?.trace,
-            meta: evalPolicyMeta,
-            parentId: policyStartEventId,
-        });
+		return result;
+	};
 
-        event?.emit({
-            type: "policy.end",
-            trace: inputValue.audit?.trace,
-            durationMs: Date.now() - policyStartTimestamp,
-            meta: evalPolicyMeta,
-            parentId: policyStartEventId,
-        });
+	for (const rule of policy.rules.values()) {
+		let result: RuleResult;
+		const ruleStartTimestamp = Date.now();
+		ctx.ruleRef = rule;
 
-        return result;
-    }
+		const ruleData = {
+			name: rule.name,
+			id: rule.id,
+			version: rule.version,
+		};
 
+		const ruleStartEventId = event?.emit({
+			type: "rule.start",
+			rule: ruleData,
+			trace: inputValue.audit?.trace,
+			parentId: policyStartEventId,
+		});
 
-    
-    
-    for (const rule of policy.rules.values()) {
-        let result: RuleResult;
-        const ruleStartTimestamp = Date.now();
+		try {
+			const ruleInput = inputValue as Parameters<typeof rule.evaluate>[0];
+			result = await rule.evaluate(ruleInput, ctx);
+		} catch (error: unknown) {
+			result = deny({ reason: "rule_evaluation_error" });
+		}
 
-        const ruleData = {
-            name: rule.name,
-            id: rule.id,
-            version: rule.version,
-        }
+		event?.emit({
+			type: "rule.decision",
+			rule: ruleData,
+			decision: {
+				outcome: result.allowed
+					? result.skipped
+						? "skip"
+						: "allow"
+					: "deny",
+				reason: result.reason,
+			},
+			trace: inputValue.audit?.trace,
+			parentId: ruleStartEventId,
+		});
 
-        const ruleStartEventId = event?.emit({
-            type: "rule.start",
-            rule: ruleData,
-            trace: inputValue.audit?.trace,
-            parentId: policyStartEventId,
-        });
+		event?.emit({
+			type: "rule.end",
+			rule: ruleData,
+			trace: inputValue.audit?.trace,
+			durationMs: Date.now() - ruleStartTimestamp,
+			parentId: ruleStartEventId,
+		});
 
-        try {
-            result = await rule.evaluate(inputValue, ctx);
-        } catch (error) {
-            result = deny({ reason: 'rule_evaluation_error' });
-        }
+		// Always collect all rules and their results
+		evaluatedRules.push({ rule, result });
 
+		// For preemptive strategy, trigger hooks immediately
+		if (strategy === "preemptive") {
+			if (result.allowed && !result.skipped && rule.hooks?.onAllow) {
+				const onAllow = rule.hooks.onAllow;
+				const hookInput = inputValue as Parameters<typeof onAllow>[1];
+				await onAllow(result, hookInput, ctx);
+			} else if (
+				!result.allowed &&
+				!result.skipped &&
+				rule.hooks?.onDeny
+			) {
+				const onDeny = rule.hooks.onDeny;
+				const hookInput = inputValue as Parameters<typeof onDeny>[1];
+				await onDeny(result, hookInput, ctx);
+			}
+		}
 
-        event?.emit({
-            type: "rule.decision",
-            rule: ruleData,
-            decision: {
-                outcome: result.allowed ? result.skipped ? 'skip' : 'allow' : 'deny',
-                reason: result.reason,
-            },
-            trace: inputValue.audit?.trace,
-            parentId: ruleStartEventId,
-        });
-        
+		if (!result.allowed) {
+			violatedRules.push({
+				name: rule.name,
+				result,
+			});
 
-        event?.emit({
-            type: "rule.end",
-            rule: ruleData,
-            trace: inputValue.audit?.trace,
-            durationMs: Date.now() - ruleStartTimestamp,
-            parentId: ruleStartEventId,
-        });
+			if (strategy === "preemptive") {
+				return createResult({
+					decision: "deny",
+					reason: "policy_violated",
+				});
+			}
+		}
+	}
 
-        // Always collect all rules and their results
-        evaluatedRules.push({ rule, result });
-        
-        // For preemptive strategy, trigger hooks immediately
-        if (strategy === 'preemptive') {
-            if (result.allowed && !result.skipped && rule.hooks?.onAllow) {
-                await rule.hooks.onAllow(result, inputValue, ctx);
-            } else if (!result.allowed && !result.skipped && rule.hooks?.onDeny) {
-                await rule.hooks.onDeny(result, inputValue, ctx);
-            }
-        }
-        
-        if(!result.allowed){
-            violatedRules.push({    
-                name: rule.name,
-                result,
-            });
+	// Determine final decision
+	const finalDecision = violatedRules.length === 0 ? "allow" : "deny";
 
-            if(strategy === 'preemptive'){
-                return createResult({
-                    decision:'deny',
-                    reason:'policy_violated',
-                });
-            }
-        }
-    }
+	// For non-preemptive strategies, trigger hooks based on final decision
+	if (strategy !== "preemptive") {
+		for (const { rule, result } of evaluatedRules) {
+			if (
+				finalDecision === "allow" &&
+				result.allowed &&
+				!result.skipped &&
+				rule.hooks?.onAllow
+			) {
+				const onAllow = rule.hooks.onAllow;
+				const hookInput = inputValue as Parameters<typeof onAllow>[1];
+				await onAllow(result, hookInput, ctx);
+			} else if (
+				finalDecision === "deny" &&
+				!result.allowed &&
+				!result.skipped &&
+				rule.hooks?.onDeny
+			) {
+				const onDeny = rule.hooks.onDeny;
+				const hookInput = inputValue as Parameters<typeof onDeny>[1];
+				await onDeny(result, hookInput, ctx);
+			}
+		}
+	}
 
-    // Determine final decision
-    const finalDecision = violatedRules.length === 0 ? 'allow' : 'deny';
-    
-    // For non-preemptive strategies, trigger hooks based on final decision
-    if (strategy !== 'preemptive') {
-        for (const { rule, result } of evaluatedRules) {
-            if (finalDecision === 'allow' && result.allowed && !result.skipped && rule.hooks?.onAllow) {
-                await rule.hooks.onAllow(result, inputValue, ctx);
-            } else if (finalDecision === 'deny' && !result.allowed && !result.skipped && rule.hooks?.onDeny) {
-                await rule.hooks.onDeny(result, inputValue, ctx);
-            }
-        }
-    }
+	if (violatedRules.length === 0) {
+		return createResult({
+			decision: "allow",
+			reason: "policy_enforced",
+		});
+	}
 
-    if(violatedRules.length === 0){
-        return createResult({
-            decision:'allow',
-            reason:'policy_enforced',
-        });
-    }
-
-    return createResult({
-        decision:'deny',
-        reason:'policy_violated',
-    });
+	return createResult({
+		decision: "deny",
+		reason: "policy_violated",
+	});
 }
-
 
 export type { PolicyResult };

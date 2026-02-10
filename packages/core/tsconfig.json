@@ -5,6 +5,6 @@
     "baseUrl": ".",
     "rootDir": "src"
   },
-  "include": ["src", "../with-audit/src/handler.ts"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist", "examples"]
 }
