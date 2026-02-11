@@ -15,57 +15,60 @@ Thank you for your interest in contributing to Bantai! This document provides gu
 
 1. Fork the repository
 2. Clone your fork:
-   ```bash
-   git clone https://github.com/bosquejun/bantai.git
-   cd bantai
-   ```
+    ```bash
+    git clone https://github.com/bosquejun/bantai.git
+    cd bantai
+    ```
 3. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+    ```bash
+    pnpm install
+    ```
 4. Build the project:
-   ```bash
-   pnpm build
-   ```
+    ```bash
+    pnpm build
+    ```
 5. Run tests to ensure everything works:
-   ```bash
-   cd packages/core && pnpm test
-   ```
+    ```bash
+    cd packages/core && pnpm test
+    ```
 
 ## Development Workflow
 
 ### Making Changes
 
 1. Create a new branch from `main`:
-   ```bash
-   git checkout -b feature/your-feature-name
-   # or
-   git checkout -b fix/your-bug-fix
-   ```
+
+    ```bash
+    git checkout -b feature/your-feature-name
+    # or
+    git checkout -b fix/your-bug-fix
+    ```
 
 2. Make your changes
 
 3. Ensure code quality:
-   ```bash
-   # Type check
-   pnpm check-types
-   
-   # Lint
-   pnpm lint
-   
-   # Format code
-   pnpm format
-   
-   # Run tests
-   cd packages/core && pnpm test
-   ```
+
+    ```bash
+    # Type check
+    pnpm check-types
+
+    # Lint
+    pnpm lint
+
+    # Format code
+    pnpm format
+
+    # Run tests
+    cd packages/core && pnpm test
+    ```
 
 4. Commit your changes (see [Commit Message Guidelines](#commit-message-guidelines))
 
 5. Push to your fork:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+
+    ```bash
+    git push origin feature/your-feature-name
+    ```
 
 6. Open a Pull Request on GitHub
 
@@ -192,4 +195,3 @@ If you have questions about contributing, feel free to:
 - Check existing issues and discussions
 
 Thank you for contributing to Bantai! 🎉
-

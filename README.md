@@ -28,27 +28,34 @@ yarn add @bantai-dev/core zod
 ## Quick Start
 
 ```typescript
-import { z } from 'zod';
-import { defineContext, defineRule, definePolicy, evaluatePolicy, allow, deny } from '@bantai-dev/core';
+import { z } from "zod";
+import {
+    defineContext,
+    defineRule,
+    definePolicy,
+    evaluatePolicy,
+    allow,
+    deny,
+} from "@bantai-dev/core";
 
 // 1. Define context schema
 const ageContext = defineContext(
-  z.object({
-    age: z.number().min(0).max(150),
-  })
+    z.object({
+        age: z.number().min(0).max(150),
+    })
 );
 
 // 2. Define a rule
-const ageVerificationRule = defineRule(ageContext, 'age-verification', async (input) => {
-  if (input.age >= 18) {
-    return allow({ reason: 'User is of legal age' });
-  }
-  return deny({ reason: 'User must be 18 or older' });
+const ageVerificationRule = defineRule(ageContext, "age-verification", async (input) => {
+    if (input.age >= 18) {
+        return allow({ reason: "User is of legal age" });
+    }
+    return deny({ reason: "User must be 18 or older" });
 });
 
 // 3. Define a policy
-const agePolicy = definePolicy(ageContext, 'age-verification-policy', [ageVerificationRule], {
-  defaultStrategy: 'preemptive',
+const agePolicy = definePolicy(ageContext, "age-verification-policy", [ageVerificationRule], {
+    defaultStrategy: "preemptive",
 });
 
 // 4. Evaluate policy
@@ -82,22 +89,22 @@ Bantai is designed to be extensible. The following extensions are available:
 Extensions can be composed together:
 
 ```typescript
-import { z } from 'zod';
-import { defineContext } from '@bantai-dev/core';
-import { withRateLimit, rateLimitSchema } from '@bantai-dev/with-rate-limit';
-import { withAudit } from '@bantai-dev/with-audit';
-import { createRedisStorage } from '@bantai-dev/storage-redis';
+import { z } from "zod";
+import { defineContext } from "@bantai-dev/core";
+import { withRateLimit, rateLimitSchema } from "@bantai-dev/with-rate-limit";
+import { withAudit } from "@bantai-dev/with-audit";
+import { createRedisStorage } from "@bantai-dev/storage-redis";
 
 const baseContext = defineContext(z.object({ userId: z.string() }));
 
 // Compose multiple extensions
 const context = withAudit(
-  withRateLimit(baseContext, {
-    storage: createRedisStorage({ url: process.env.REDIS_URL }, rateLimitSchema),
-  }),
-  {
-    sinks: [(event) => console.log('Audit:', event)],
-  }
+    withRateLimit(baseContext, {
+        storage: createRedisStorage({ url: process.env.REDIS_URL }, rateLimitSchema),
+    }),
+    {
+        sinks: [(event) => console.log("Audit:", event)],
+    }
 );
 ```
 

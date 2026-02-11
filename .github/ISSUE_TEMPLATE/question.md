@@ -1,9 +1,9 @@
 ---
 name: Question
 about: Ask a question about the project
-title: '[QUESTION] '
+title: "[QUESTION] "
 labels: question
-assignees: ''
+assignees: ""
 ---
 
 ## Question
@@ -13,6 +13,7 @@ Your question here.
 ## Context
 
 Provide any relevant context about your question, such as:
+
 - What you're trying to accomplish
 - What you've already tried
 - Code examples if relevant
@@ -20,4 +21,3 @@ Provide any relevant context about your question, such as:
 ## Additional Information
 
 Any other information that might be helpful in answering your question.
-

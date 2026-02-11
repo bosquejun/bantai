@@ -1,9 +1,9 @@
 ---
 name: Feature Request
 about: Suggest an idea for this project
-title: '[FEATURE] '
+title: "[FEATURE] "
 labels: enhancement
-assignees: ''
+assignees: ""
 ---
 
 ## Problem Statement
@@ -29,4 +29,3 @@ Add any other context, mockups, or examples about the feature request here.
 ## Implementation Ideas
 
 If you have ideas on how this could be implemented, please share them here.
-

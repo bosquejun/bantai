@@ -1,22 +1,22 @@
-import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    isolate: false,
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
+    test: {
+        globals: true,
+        environment: "node",
+        isolate: false,
+        pool: "threads",
+        poolOptions: {
+            threads: {
+                singleThread: true,
+            },
+        },
     },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      'src': path.resolve(__dirname, './src'),
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "./src"),
+            src: path.resolve(__dirname, "./src"),
+        },
     },
-  },
 });

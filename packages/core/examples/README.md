@@ -12,6 +12,7 @@ The examples are organized from simple to complex, covering a wide range of scen
 - **Business Logic**: E-commerce, banking systems, crypto/NFT, infrastructure
 
 Each example includes:
+
 - Context definitions with Zod schemas
 - Multiple rules demonstrating different validation patterns
 - Policy definitions with appropriate strategies
@@ -22,7 +23,9 @@ Each example includes:
 ### Basic Validation
 
 #### [age-eligibility.ts](./age-eligibility.ts)
+
 Age validation and eligibility checks including:
+
 - Minimum age requirements
 - Country-specific age requirements (COPPA, GDPR)
 - Service-specific age restrictions (alcohol, gambling, financial services)
@@ -31,7 +34,9 @@ Age validation and eligibility checks including:
 **Strategy**: Preemptive (fail fast on age check)
 
 #### [password-validation.ts](./password-validation.ts)
+
 Comprehensive password validation including:
+
 - Length requirements (minimum and maximum)
 - Complexity requirements (uppercase, lowercase, numbers, special characters)
 - Common password detection
@@ -41,7 +46,9 @@ Comprehensive password validation including:
 **Strategy**: Exhaustive (collect all validation errors to show user)
 
 #### [name-validation.ts](./name-validation.ts)
+
 Name format and validation including:
+
 - Length constraints
 - Format validation (letters, spaces, hyphens, apostrophes)
 - Country-specific name formats
@@ -53,7 +60,9 @@ Name format and validation including:
 ### Access Control
 
 #### [rate-limiting.ts](./rate-limiting.ts)
+
 API rate limiting policies including:
+
 - Per-user rate limiting
 - Endpoint-specific rate limits
 - Time window-based rate limiting
@@ -62,7 +71,9 @@ API rate limiting policies including:
 **Strategy**: Preemptive (fail fast on rate limit)
 
 #### [rbac.ts](./rbac.ts)
+
 Role-Based Access Control (RBAC) including:
+
 - Role validation
 - Permission checking based on roles
 - Resource ownership validation
@@ -74,7 +85,9 @@ Role-Based Access Control (RBAC) including:
 ### Resource Management
 
 #### [ai-token-quota.ts](./ai-token-quota.ts)
+
 AI token quota management with quality degrading including:
+
 - Daily/hourly/monthly token quotas
 - Single request size limits
 - Tier-based limits (free, premium, enterprise)
@@ -86,7 +99,9 @@ AI token quota management with quality degrading including:
 ### Business Logic
 
 #### [ecommerce.ts](./ecommerce.ts)
+
 E-commerce validation policies including:
+
 - Inventory availability checks
 - Purchase quantity limits
 - Payment method validation
@@ -96,7 +111,9 @@ E-commerce validation policies including:
 **Strategy**: Exhaustive (show all validation errors to user)
 
 #### [banking-system.ts](./banking-system.ts)
+
 Banking transaction policies including:
+
 - Balance verification
 - Daily transaction limits
 - Transaction type permissions
@@ -108,7 +125,9 @@ Banking transaction policies including:
 **Strategy**: Preemptive (fail fast on critical checks)
 
 #### [crypto-nft.ts](./crypto-nft.ts)
+
 Crypto and NFT policies including:
+
 - Ownership verification
 - Transfer eligibility
 - Gas price limits
@@ -120,7 +139,9 @@ Crypto and NFT policies including:
 **Strategy**: Exhaustive (collect all policy violations)
 
 #### [infrastructure.ts](./infrastructure.ts)
+
 Infrastructure deployment policies including:
+
 - Environment permissions
 - Resource quotas per environment
 - Cost budget limits
@@ -146,56 +167,59 @@ import { ageEligibilityPolicy, evaluatePolicy } from '@bantai-dev/core/examples/
 ## Learning Path
 
 1. **Start with basic validation** (`age-eligibility.ts`, `password-validation.ts`, `name-validation.ts`)
-   - Learn how to define contexts and rules
-   - Understand preemptive vs exhaustive strategies
-   - See simple validation patterns
+    - Learn how to define contexts and rules
+    - Understand preemptive vs exhaustive strategies
+    - See simple validation patterns
 
 2. **Move to access control** (`rate-limiting.ts`, `rbac.ts`)
-   - Learn about stateful policies
-   - Understand permission hierarchies
-   - See how to handle different user roles
+    - Learn about stateful policies
+    - Understand permission hierarchies
+    - See how to handle different user roles
 
 3. **Explore resource management** (`ai-token-quota.ts`)
-   - Learn about quota management
-   - Understand quality degradation patterns
-   - See tier-based access control
+    - Learn about quota management
+    - Understand quality degradation patterns
+    - See tier-based access control
 
 4. **Study complex business logic** (`ecommerce.ts`, `banking-system.ts`, `crypto-nft.ts`, `infrastructure.ts`)
-   - Learn about multi-rule policies
-   - Understand complex validation scenarios
-   - See real-world policy patterns
+    - Learn about multi-rule policies
+    - Understand complex validation scenarios
+    - See real-world policy patterns
 
 ## Key Concepts
 
 ### Context
+
 A context defines the input schema for your policy. It uses Zod for type-safe validation.
 
 ```typescript
 const schema = z.object({
-  age: z.number(),
-  country: z.string(),
+    age: z.number(),
+    country: z.string(),
 });
 
 const context = defineContext(schema);
 ```
 
 ### Rules
+
 Rules are individual validation checks that return `allow()` or `deny()`.
 
 ```typescript
-const ageCheck = defineRule(context, 'age-check', async (input) => {
-  return input.age >= 18 
-    ? allow({ reason: 'User is an adult' })
-    : deny({ reason: 'User is not an adult' });
+const ageCheck = defineRule(context, "age-check", async (input) => {
+    return input.age >= 18
+        ? allow({ reason: "User is an adult" })
+        : deny({ reason: "User is not an adult" });
 });
 ```
 
 ### Policies
+
 Policies combine multiple rules and define the evaluation strategy.
 
 ```typescript
-const policy = definePolicy(context, 'my-policy', [rule1, rule2], {
-  defaultStrategy: 'preemptive', // or 'exhaustive'
+const policy = definePolicy(context, "my-policy", [rule1, rule2], {
+    defaultStrategy: "preemptive", // or 'exhaustive'
 });
 ```
 
@@ -208,8 +232,8 @@ const policy = definePolicy(context, 'my-policy', [rule1, rule2], {
 
 ```typescript
 const result = await evaluatePolicy(policy, {
-  age: 25,
-  country: 'US',
+    age: 25,
+    country: "US",
 });
 
 console.log(result.decision); // 'allow' or 'deny'
@@ -229,9 +253,9 @@ console.log(result.violatedRules); // Array of violated rules
 ## Contributing
 
 When adding new examples:
+
 - Follow the existing file structure
 - Include comprehensive comments
 - Provide multiple example scenarios (both success and failure cases)
 - Use appropriate strategy (preemptive vs exhaustive)
 - Export all rules and policies for reuse
-

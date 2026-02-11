@@ -1,72 +1,104 @@
 {
-  "name": "@bantai-dev/core",
-  "version": "1.2.0",
-  "description": "TypeScript-first policy evaluation library for rule-based validation and decision-making",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    "name": "@bantai-dev/core",
+    "version": "1.2.0",
+    "description": "TypeScript-first policy evaluation library for rule-based validation and decision-making",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./audit": {
+            "types": "./dist/audit/index.d.ts",
+            "default": "./dist/audit/index.js"
+        },
+        "./audit/*": {
+            "types": "./dist/audit/*.d.ts",
+            "default": "./dist/audit/*.js"
+        },
+        "./context": {
+            "types": "./dist/context/index.d.ts",
+            "default": "./dist/context/index.js"
+        },
+        "./context/*": {
+            "types": "./dist/context/*.d.ts",
+            "default": "./dist/context/*.js"
+        },
+        "./policies": {
+            "types": "./dist/policies/index.d.ts",
+            "default": "./dist/policies/index.js"
+        },
+        "./policies/*": {
+            "types": "./dist/policies/*.d.ts",
+            "default": "./dist/policies/*.js"
+        },
+        "./rules": {
+            "types": "./dist/rules/index.d.ts",
+            "default": "./dist/rules/index.js"
+        },
+        "./rules/*": {
+            "types": "./dist/rules/*.d.ts",
+            "default": "./dist/rules/*.js"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bosquejun/bantai.git",
+        "directory": "packages/core"
+    },
+    "homepage": "https://bantai.vercel.app/",
+    "bugs": {
+        "url": "https://github.com/bosquejun/bantai/issues"
+    },
+    "keywords": [
+        "policy-engine",
+        "policy-library",
+        "decision-engine",
+        "rule-engine",
+        "validation-library",
+        "business-rules",
+        "policy-evaluation",
+        "authorization",
+        "access-control",
+        "validation",
+        "zod",
+        "typescript"
+    ],
+    "author": {
+        "name": "Jun",
+        "email": "bosquejun@gmail.com"
+    },
+    "license": "MIT",
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "scripts": {
+        "build": "tsup",
+        "check-types": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest --coverage"
+    },
+    "devDependencies": {
+        "@bantai-dev/typescript-config": "workspace:*",
+        "tsconfig-paths": "^4.2.0",
+        "tsup": "^8.5.1",
+        "typescript": "5.9.2",
+        "vitest": "^2.1.8"
+    },
+    "dependencies": {
+        "@bantai-dev/shared": "workspace:*",
+        "zod": "^4.3.5"
+    },
+    "peerDependencies": {
+        "zod": "^4.3.5"
     }
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/bosquejun/bantai.git",
-    "directory": "packages/core"
-  },
-  "homepage": "https://bantai.vercel.app/",
-  "bugs": {
-    "url": "https://github.com/bosquejun/bantai/issues"
-  },
-  "keywords": [
-    "policy-engine",
-    "policy-library",
-    "decision-engine",
-    "rule-engine",
-    "validation-library",
-    "business-rules",
-    "policy-evaluation",
-    "authorization",
-    "access-control",
-    "validation",
-    "zod",
-    "typescript"
-  ],
-  "author": {
-    "name": "Jun",
-    "email": "bosquejun@gmail.com"
-  },
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "scripts": {
-    "build": "tsup",
-    "check-types": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest --coverage"
-  },
-  "devDependencies": {
-    "@bantai-dev/typescript-config": "workspace:*",
-    "tsconfig-paths": "^4.2.0",
-    "tsup": "^8.5.1",
-    "typescript": "5.9.2",
-    "vitest": "^2.1.8"
-  },
-  "dependencies": {
-    "@bantai-dev/shared": "workspace:*",
-    "zod": "^4.3.5"
-  },
-  "peerDependencies": {
-    "zod": "^4.3.5"
-  }
 }

@@ -1,0 +1,54 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Test files
+*.test.ts
+*.spec.ts
+**/*.test.ts
+**/*.spec.ts
+**/__tests__/
+**/__mocks__/
+test/
+tests/
+vitest.config.ts
+
+# Configuration files
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+.prettierrc*
+.eslintrc*
+.editorconfig
+
+# Development files
+.git/
+.gitignore
+.github/
+.pnpm-store/
+
+# Documentation (keep README.md, exclude others)
+docs/
+*.md
+!README.md
+
+# Build tools
+node_modules/
+.pnpm-store/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+.env*
+*.log
+.cache
+

@@ -13,19 +13,19 @@ A comprehensive checklist to ensure your PR is ready for review and meets open s
 - [ ] **Check if issue exists** - Search existing issues for your topic
 - [ ] **Create issue first (if needed)** - For significant changes, discuss before coding
 - [ ] **Comment on issue to claim work** - Prevents duplicate effort
-  ```
-  "Hi! I'd like to work on this. My approach would be to [brief outline]."
-  ```
+    ```
+    "Hi! I'd like to work on this. My approach would be to [brief outline]."
+    ```
 - [ ] **Wait for acknowledgment** - Especially for large changes
 - [ ] **Fork the repository** - If you don't have write access
 - [ ] **Set up upstream remote**
-  ```bash
-  git remote add upstream https://github.com/ORIGINAL/repo.git
-  ```
+    ```bash
+    git remote add upstream https://github.com/ORIGINAL/repo.git
+    ```
 - [ ] **Create feature branch** - NEVER work on main/master
-  ```bash
-  git checkout -b feature/descriptive-name
-  ```
+    ```bash
+    git checkout -b feature/descriptive-name
+    ```
 - [ ] **Understand testing requirements** - Check what tests are expected
 - [ ] **Identify code style tools** - Look for .eslintrc, .prettierrc, etc.
 
@@ -41,25 +41,27 @@ A comprehensive checklist to ensure your PR is ready for review and meets open s
 - [ ] **Add/update documentation** - README, API docs, inline comments
 - [ ] **Keep commits atomic** - One logical change per commit
 - [ ] **Write good commit messages** - Follow Conventional Commits format
-  ```
-  feat(scope): brief description
 
-  Longer explanation if needed
+    ```
+    feat(scope): brief description
 
-  Fixes #123
-  ```
+    Longer explanation if needed
+
+    Fixes #123
+    ```
+
 - [ ] **Run linters and formatters** - Fix style issues during development
-  ```bash
-  npm run lint
-  npm run format
-  ```
+    ```bash
+    npm run lint
+    npm run format
+    ```
 - [ ] **Test locally frequently** - Don't wait until the end
 - [ ] **Keep PR scope focused** - One feature/fix per PR
 - [ ] **Sync with upstream regularly** - Avoid merge conflicts
-  ```bash
-  git fetch upstream
-  git rebase upstream/main
-  ```
+    ```bash
+    git fetch upstream
+    git rebase upstream/main
+    ```
 
 ---
 
@@ -68,26 +70,26 @@ A comprehensive checklist to ensure your PR is ready for review and meets open s
 ### Code Quality
 
 - [ ] **All tests pass locally**
-  ```bash
-  npm test
-  # or
-  pytest
-  # or
-  cargo test
-  # or project's test command
-  ```
+    ```bash
+    npm test
+    # or
+    pytest
+    # or
+    cargo test
+    # or project's test command
+    ```
 - [ ] **Code builds successfully**
-  ```bash
-  npm run build
-  ```
+    ```bash
+    npm run build
+    ```
 - [ ] **Linter passes**
-  ```bash
-  npm run lint
-  ```
+    ```bash
+    npm run lint
+    ```
 - [ ] **Formatter applied**
-  ```bash
-  npm run format
-  ```
+    ```bash
+    npm run format
+    ```
 - [ ] **Code coverage maintained** - If project has minimum thresholds
 - [ ] **No compiler warnings** - Clean build output
 - [ ] **Manual testing completed** - Test the actual functionality
@@ -95,9 +97,9 @@ A comprehensive checklist to ensure your PR is ready for review and meets open s
 ### Code Review (Self)
 
 - [ ] **Review your own diff**
-  ```bash
-  git diff origin/main
-  ```
+    ```bash
+    git diff origin/main
+    ```
 - [ ] **No debugging code** - Remove console.logs, debugger statements
 - [ ] **No commented-out code** - Remove dead code
 - [ ] **No TODO comments** - Complete work or create follow-up issues
@@ -108,6 +110,7 @@ A comprehensive checklist to ensure your PR is ready for review and meets open s
 ### Cleanup (Critical!)
 
 Run the pre-PR check script:
+
 ```bash
 ./scripts/pre-pr-check.sh
 ```
@@ -115,36 +118,36 @@ Run the pre-PR check script:
 - [ ] **Remove SESSION.md** - Personal session tracking
 - [ ] **Remove NOTES.md** - Development notes
 - [ ] **Remove TODO.md** - Personal todo lists
-- [ ] **Remove planning/* directory** - Project planning documents
+- [ ] **Remove planning/\* directory** - Project planning documents
 - [ ] **Remove debug screenshots** - Screenshots used during debugging
-  - Keep only screenshots demonstrating features for PR description
+    - Keep only screenshots demonstrating features for PR description
 - [ ] **Remove temporary test files**
-  - test-manual.js, test-debug.ts, quick-test.py
+    - test-manual.js, test-debug.ts, quick-test.py
 - [ ] **Remove personal workflow files**
-  - scratch.*, temp.*, debug.*
+    - scratch._, temp._, debug.\*
 - [ ] **No IDE/editor files**
-  - .vscode/, .idea/, *.swp
-  - Should be in global .gitignore, not committed
+    - .vscode/, .idea/, \*.swp
+    - Should be in global .gitignore, not committed
 - [ ] **No OS-specific files**
-  - .DS_Store, Thumbs.db, desktop.ini
+    - .DS_Store, Thumbs.db, desktop.ini
 - [ ] **No build artifacts**
-  - dist/, build/, node_modules/, __pycache__/
+    - dist/, build/, node_modules/, **pycache**/
 - [ ] **No secrets or credentials**
-  - .env, credentials.json, *.key, *.pem
-  - Double-check with: `git diff | grep -i "password\|secret\|key"`
+    - .env, credentials.json, _.key, _.pem
+    - Double-check with: `git diff | grep -i "password\|secret\|key"`
 - [ ] **No large binary files** - Unless necessary for the PR
 - [ ] **No unrelated changes** - Only changes relevant to this PR
 
 ### Git Hygiene
 
 - [ ] **Commits are clean** - No "WIP" or "fix typo" commits
-  - Consider squashing if needed
+    - Consider squashing if needed
 - [ ] **Commit messages follow conventions** - Conventional Commits format
 - [ ] **No merge conflicts** - Rebase on latest upstream/main
-  ```bash
-  git fetch upstream
-  git rebase upstream/main
-  ```
+    ```bash
+    git fetch upstream
+    git rebase upstream/main
+    ```
 - [ ] **Branch is up to date** - Latest changes from main included
 - [ ] **On feature branch** - Not on main/master
 
@@ -155,34 +158,34 @@ Run the pre-PR check script:
 ### PR Description
 
 - [ ] **Title follows conventions** - Conventional Commits format
-  ```
-  feat(auth): add OAuth2 support
-  fix(api): resolve memory leak
-  docs(readme): update installation
-  ```
+    ```
+    feat(auth): add OAuth2 support
+    fix(api): resolve memory leak
+    docs(readme): update installation
+    ```
 - [ ] **Uses What/Why/How structure**
-  - What: Brief description of changes
-  - Why: Reasoning and context
-  - How: Implementation approach
+    - What: Brief description of changes
+    - Why: Reasoning and context
+    - How: Implementation approach
 - [ ] **Testing instructions included** - Step-by-step how to test
 - [ ] **Screenshots for visual changes** - Before/after if applicable
 - [ ] **Breaking changes noted** - If any
 - [ ] **Links to related issues** - Use closing keywords
-  ```
-  Closes #123
-  Fixes #456
-  Relates to #789
-  ```
+    ```
+    Closes #123
+    Fixes #456
+    Relates to #789
+    ```
 - [ ] **Checklist included** - Tests, docs, CI status
 - [ ] **Description is clear** - Reviewer can understand without asking questions
 
 ### PR Quality
 
 - [ ] **PR is reasonably sized**
-  - Ideal: < 50 lines
-  - Good: < 200 lines
-  - Max: < 400 lines
-  - If larger, explain why or split into multiple PRs
+    - Ideal: < 50 lines
+    - Good: < 200 lines
+    - Max: < 400 lines
+    - If larger, explain why or split into multiple PRs
 - [ ] **PR is focused** - One feature/fix/refactor, not multiple unrelated changes
 - [ ] **No unrelated changes** - No "drive-by fixes" in unrelated files
 - [ ] **All changed files are intentional** - Review git status
@@ -190,17 +193,17 @@ Run the pre-PR check script:
 ### GitHub Settings
 
 - [ ] **Pushed to feature branch on fork**
-  ```bash
-  git push origin feature/my-feature
-  ```
+    ```bash
+    git push origin feature/my-feature
+    ```
 - [ ] **PR targets correct branch** - Usually main or develop
 - [ ] **Assigned labels** - If you have permission
 - [ ] **Requested reviewers** - If known and appropriate
 - [ ] **Linked to project/milestone** - If applicable
 - [ ] **Set as draft** - If not ready for full review yet
-  ```bash
-  gh pr create --draft
-  ```
+    ```bash
+    gh pr create --draft
+    ```
 
 ---
 
@@ -219,9 +222,9 @@ Run the pre-PR check script:
 - [ ] **Address all review comments** - Even if just "Acknowledged"
 - [ ] **Mark conversations resolved** - After addressing feedback
 - [ ] **Request re-review** - After making changes
-  ```bash
-  gh pr ready  # if was draft
-  ```
+    ```bash
+    gh pr ready  # if was draft
+    ```
 - [ ] **Thank reviewers** - Shows appreciation for their time
 - [ ] **Professional tone** - Courteous and respectful
 - [ ] **Ask for clarification** - If feedback is unclear
@@ -230,11 +233,11 @@ Run the pre-PR check script:
 ### Updates
 
 - [ ] **Keep PR updated** - Rebase if main moves forward
-  ```bash
-  git fetch upstream
-  git rebase upstream/main
-  git push origin feature/my-feature --force-with-lease
-  ```
+    ```bash
+    git fetch upstream
+    git rebase upstream/main
+    git push origin feature/my-feature --force-with-lease
+    ```
 - [ ] **Fix requested changes** - Implement feedback
 - [ ] **Update documentation** - If requirements change
 - [ ] **Squash commits** - If maintainer requests
@@ -278,7 +281,7 @@ gh pr create --title "feat: ..." --body "$(cat pr-description.md)"
 Avoid these common errors:
 
 - [ ] ❌ Not reading CONTRIBUTING.md
-- [ ] ❌ Including personal artifacts (SESSION.md, planning/*)
+- [ ] ❌ Including personal artifacts (SESSION.md, planning/\*)
 - [ ] ❌ Submitting massive PR (>400 lines)
 - [ ] ❌ Not testing before submission
 - [ ] ❌ Working on already assigned issue

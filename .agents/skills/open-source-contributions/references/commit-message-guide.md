@@ -39,36 +39,43 @@ A comprehensive guide to writing clear, consistent, and maintainable commit mess
 ### Primary Types
 
 **feat**: New feature for the user
+
 ```
 feat(auth): add OAuth2 support for Google and GitHub
 ```
 
 **fix**: Bug fix for the user
+
 ```
 fix(api): resolve memory leak in worker shutdown
 ```
 
 **docs**: Documentation changes only
+
 ```
 docs(readme): update installation instructions for v2.0
 ```
 
 **style**: Code style changes (formatting, missing semicolons, etc.)
+
 ```
 style(components): format code with Prettier
 ```
 
 **refactor**: Code change that neither fixes bug nor adds feature
+
 ```
 refactor(auth): extract middleware to separate module
 ```
 
 **perf**: Performance improvement
+
 ```
 perf(database): add index to user_id column
 ```
 
 **test**: Adding or updating tests
+
 ```
 test(auth): add OAuth flow integration tests
 ```
@@ -76,21 +83,25 @@ test(auth): add OAuth flow integration tests
 ### Supporting Types
 
 **build**: Changes to build system or dependencies
+
 ```
 build(deps): upgrade React to v18.2.0
 ```
 
 **ci**: CI configuration changes
+
 ```
 ci(github): add automated release workflow
 ```
 
 **chore**: Other changes that don't modify src or test files
+
 ```
 chore(deps): update dev dependencies
 ```
 
 **revert**: Revert a previous commit
+
 ```
 revert: feat(auth): add OAuth2 support
 
@@ -114,6 +125,7 @@ This reverts commit abc123def456.
 ### Examples
 
 ✅ **Good:**
+
 ```
 feat(api): add user authentication endpoint
 fix(ui): resolve button alignment on mobile
@@ -122,6 +134,7 @@ refactor(utils): simplify date formatting logic
 ```
 
 ❌ **Bad:**
+
 ```
 Fixed stuff                           # Too vague
 Added new feature to the authentication system that allows users to login with OAuth  # Too long
@@ -152,6 +165,7 @@ build(webpack): ...     # Build tooling
 ### Project-Specific Scopes
 
 Check the project's recent commits for conventions:
+
 ```bash
 git log --oneline -20
 ```
@@ -159,6 +173,7 @@ git log --oneline -20
 ### When to Omit Scope
 
 Scope is optional. Omit when:
+
 - Change affects multiple areas
 - Project doesn't use scopes
 - Scope would be too generic
@@ -204,6 +219,7 @@ as a security vulnerability in audit #456.
 ### When to Include Body
 
 Include a body when:
+
 - Change is complex or non-obvious
 - Design decisions need explanation
 - Previous behavior needs context
@@ -213,6 +229,7 @@ Include a body when:
 ### When to Skip Body
 
 Skip the body when:
+
 - Change is self-explanatory
 - Subject line tells the complete story
 - Trivial changes (typos, formatting)
@@ -251,6 +268,7 @@ Relates to #234
 ```
 
 **Closing Keywords:**
+
 - `Closes #123`
 - `Fixes #123`
 - `Resolves #123`
@@ -383,16 +401,19 @@ Fixes #123, #456, #789
 ### Do:
 
 ✅ Write in imperative mood ("Add" not "Added")
+
 ```
 feat: add user profile page
 ```
 
 ✅ Be specific about what changed
+
 ```
 fix(api): resolve timeout in user search endpoint
 ```
 
 ✅ Explain WHY in the body
+
 ```
 refactor(db): switch to connection pooling
 
@@ -408,32 +429,38 @@ reduces overhead and improves response times by 40%.
 ### Don't:
 
 ❌ Use past tense
+
 ```
 feat: added user profile page  ❌
 ```
 
 ❌ Be vague
+
 ```
 fix: bug fix  ❌
 update: changes  ❌
 ```
 
 ❌ Write novels in the subject line
+
 ```
 feat(api): add new user authentication endpoint with OAuth2 support for Google and GitHub that also includes rate limiting  ❌
 ```
 
 ❌ Skip the type (if project uses Conventional Commits)
+
 ```
 Add user profile page  ❌
 ```
 
 ❌ Use abbreviations or jargon unnecessarily
+
 ```
 fix(db): rm dup recs via opt idx  ❌
 ```
 
 ❌ Combine unrelated changes in one commit
+
 ```
 feat: add dark mode, fix typo in README, update dependencies  ❌
 ```
@@ -443,6 +470,7 @@ feat: add dark mode, fix typo in README, update dependencies  ❌
 ## Real-World Examples from Popular Projects
 
 ### React
+
 ```
 feat(react-dom): Add support for CSS Layers
 
@@ -452,6 +480,7 @@ Fixes #24556
 ```
 
 ### Node.js
+
 ```
 doc: add missing types to request and response
 
@@ -463,6 +492,7 @@ Refs: #67890
 ```
 
 ### Kubernetes
+
 ```
 fix: prevent pod creation with invalid security context
 
@@ -497,6 +527,7 @@ Before committing, verify:
 ### Commitizen
 
 Interactive tool for writing commits:
+
 ```bash
 npm install -g commitizen
 git cz
@@ -505,6 +536,7 @@ git cz
 ### Commitlint
 
 Lint commit messages:
+
 ```bash
 npm install --save-dev @commitlint/cli @commitlint/config-conventional
 ```
@@ -512,6 +544,7 @@ npm install --save-dev @commitlint/cli @commitlint/config-conventional
 ### Husky
 
 Git hooks to enforce commit message format:
+
 ```bash
 npm install --save-dev husky
 npx husky add .husky/commit-msg 'npx --no -- commitlint --edit ${1}'
@@ -522,13 +555,16 @@ npx husky add .husky/commit-msg 'npx --no -- commitlint --edit ${1}'
 ## Resources
 
 **Specifications:**
+
 - Conventional Commits: https://www.conventionalcommits.org/
 - Git Commit Guidelines: https://git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project
 
 **Tools:**
+
 - Commitizen: https://github.com/commitizen/cz-cli
 - Commitlint: https://commitlint.js.org/
 
 **Further Reading:**
+
 - "How to Write a Git Commit Message": https://chris.beams.io/posts/git-commit/
 - Angular Commit Guidelines: https://github.com/angular/angular/blob/main/CONTRIBUTING.md#commit

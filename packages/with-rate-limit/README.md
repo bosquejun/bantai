@@ -21,73 +21,64 @@ yarn add @bantai-dev/with-rate-limit @bantai-dev/core @bantai-dev/with-storage z
 ## Quick Start
 
 ```typescript
-import { z } from 'zod';
-import { defineContext, definePolicy, evaluatePolicy, allow } from '@bantai-dev/core';
-import { createMemoryStorage } from '@bantai-dev/with-storage';
-import {
-  withRateLimit,
-  defineRateLimitRule,
-  rateLimit,
-} from '@bantai-dev/with-rate-limit';
+import { z } from "zod";
+import { defineContext, definePolicy, evaluatePolicy, allow } from "@bantai-dev/core";
+import { createMemoryStorage } from "@bantai-dev/with-storage";
+import { withRateLimit, defineRateLimitRule, rateLimit } from "@bantai-dev/with-rate-limit";
 
 // 1. Define your base context
 const apiContext = defineContext(
-  z.object({
-    userId: z.string(),
-    endpoint: z.string(),
-  })
+    z.object({
+        userId: z.string(),
+        endpoint: z.string(),
+    })
 );
 
 // 2. Extend context with rate limiting
 // generateKey will automatically create keys from your input
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimit.storageSchema),
-  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
-  defaultValues: {
-    rateLimit: {
-      type: 'fixed-window',
-      limit: 100,
-      period: '1h',
+    storage: createMemoryStorage(rateLimit.storageSchema),
+    generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+    defaultValues: {
+        rateLimit: {
+            type: "fixed-window",
+            limit: 100,
+            period: "1h",
+        },
     },
-  },
 });
 
 // 3. Define a rate limiting rule using defineRateLimitRule
 // This automatically handles rate limit checking and incrementing
 const rateLimitRule = defineRateLimitRule(
-  rateLimitedContext,
-  'check-rate-limit',
-  async (input) => {
-    // Your business logic here
-    // Rate limit is already checked and will be incremented on allow
-    // input.currentLimit contains the rate limit check result
-    console.log(`Remaining: ${input.currentLimit.remaining}`);
-    return allow({ reason: 'Request allowed' });
-  },
-  {
-    config: {
-      limit: 100,
-      period: '1h',
-      type: 'fixed-window',
+    rateLimitedContext,
+    "check-rate-limit",
+    async (input) => {
+        // Your business logic here
+        // Rate limit is already checked and will be incremented on allow
+        // input.currentLimit contains the rate limit check result
+        console.log(`Remaining: ${input.currentLimit.remaining}`);
+        return allow({ reason: "Request allowed" });
     },
-  }
+    {
+        config: {
+            limit: 100,
+            period: "1h",
+            type: "fixed-window",
+        },
+    }
 );
 
 // 4. Define policy
-const apiPolicy = definePolicy(
-  rateLimitedContext,
-  'api-rate-limit-policy',
-  [rateLimitRule],
-  {
-    defaultStrategy: 'preemptive',
-  }
-);
+const apiPolicy = definePolicy(rateLimitedContext, "api-rate-limit-policy", [rateLimitRule], {
+    defaultStrategy: "preemptive",
+});
 
 // 5. Evaluate policy
 // The generateKey function will create the key automatically
 const result = await evaluatePolicy(apiPolicy, {
-  userId: 'user123',
-  endpoint: '/api/search',
+    userId: "user123",
+    endpoint: "/api/search",
 });
 ```
 
@@ -150,30 +141,31 @@ Token bucket rate limiting uses a bucket that refills at a constant rate. Reques
 Extends a Bantai context with rate limiting capabilities. Adds `rateLimit` schema fields and tools to the context.
 
 **Parameters:**
+
 - `context`: A Bantai context definition
 - `options`:
-  - `storage?`: A storage adapter implementing `RateLimitStorage` interface
-  - `defaultValues?`: Default values for rate limit configuration
-  - `generateKey?`: Optional function to generate rate limit keys dynamically from context input. If provided, this function will be used when `rateLimit.key` is not specified in the input.
+    - `storage?`: A storage adapter implementing `RateLimitStorage` interface
+    - `defaultValues?`: Default values for rate limit configuration
+    - `generateKey?`: Optional function to generate rate limit keys dynamically from context input. If provided, this function will be used when `rateLimit.key` is not specified in the input.
 
 **Returns:** Extended context with rate limiting capabilities
 
 **Example with generateKey:**
 
 ```typescript
-import { createMemoryStorage } from '@bantai-dev/with-storage';
-import { withRateLimit, rateLimit } from '@bantai-dev/with-rate-limit';
+import { createMemoryStorage } from "@bantai-dev/with-storage";
+import { withRateLimit, rateLimit } from "@bantai-dev/with-rate-limit";
 
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: createMemoryStorage(rateLimit.storageSchema),
-  generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
-  defaultValues: {
-    rateLimit: {
-      type: 'fixed-window',
-      limit: 100,
-      period: '1h',
+    storage: createMemoryStorage(rateLimit.storageSchema),
+    generateKey: (input) => `api:${input.userId}:${input.endpoint}`,
+    defaultValues: {
+        rateLimit: {
+            type: "fixed-window",
+            limit: 100,
+            period: "1h",
+        },
     },
-  },
 });
 ```
 
@@ -184,15 +176,16 @@ When using `defineRateLimitRule`, if `rateLimit.key` is not provided in the inpu
 A helper function that automatically handles rate limit checking and incrementing. This simplifies rule creation by handling the rate limit logic for you.
 
 **Parameters:**
+
 - `context`: A context extended with rate limiting capabilities via `withRateLimit`
 - `name`: Unique name for the rule
 - `evaluate`: Your rule evaluation function. The function receives:
-  - `input`: The context input with an additional `currentLimit` property containing the rate limit check result
-  - `context`: The evaluation context with tools
+    - `input`: The context input with an additional `currentLimit` property containing the rate limit check result
+    - `context`: The evaluation context with tools
 - `options`: Configuration object
-  - `config`: Rate limit configuration (required). This will be merged with any `rateLimit` config from the input.
-  - `onAllow?`: Optional hook called after rate limit is incremented (if your rule allows)
-  - `onDeny?`: Optional hook called if your rule denies
+    - `config`: Rate limit configuration (required). This will be merged with any `rateLimit` config from the input.
+    - `onAllow?`: Optional hook called after rate limit is incremented (if your rule allows)
+    - `onDeny?`: Optional hook called if your rule denies
 
 **Returns:** `RuleDefinition<TContext, TName>`
 
@@ -211,28 +204,29 @@ A helper function that automatically handles rate limit checking and incrementin
 3. Otherwise, fall back to `'unknown-key'`
 
 **Example:**
+
 ```typescript
 const rateLimitRule = defineRateLimitRule(
-  rateLimitedContext,
-  'api-rule',
-  async (input) => {
-    // input.currentLimit contains the rate limit check result
-    console.log(`Remaining: ${input.currentLimit.remaining}`);
-    
-    // Your business logic here
-    return allow({ reason: 'Request processed' });
-  },
-  {
-    config: {
-      limit: 100,
-      period: '1h',
-      type: 'fixed-window',
+    rateLimitedContext,
+    "api-rule",
+    async (input) => {
+        // input.currentLimit contains the rate limit check result
+        console.log(`Remaining: ${input.currentLimit.remaining}`);
+
+        // Your business logic here
+        return allow({ reason: "Request processed" });
     },
-    onAllow: async (result, input) => {
-      // Optional: Additional logic after rate limit increment
-      console.log(`Request allowed for ${input.userId}`);
-    },
-  }
+    {
+        config: {
+            limit: 100,
+            period: "1h",
+            type: "fixed-window",
+        },
+        onAllow: async (result, input) => {
+            // Optional: Additional logic after rate limit increment
+            console.log(`Request allowed for ${input.userId}`);
+        },
+    }
 );
 ```
 
@@ -241,6 +235,7 @@ const rateLimitRule = defineRateLimitRule(
 Checks if a rate limit would be exceeded without incrementing the counter. Use this in your rule's `evaluate` function when not using `defineRateLimitRule`.
 
 **Parameters:**
+
 - `storage`: Storage adapter implementing `RateLimitStorage`
 - `config`: Rate limit configuration object
 - `clock?`: Optional clock function for testing (defaults to `Date.now`)
@@ -248,6 +243,7 @@ Checks if a rate limit would be exceeded without incrementing the counter. Use t
 **Returns:** `Promise<RateLimitCheckResult>`
 
 **RateLimitCheckResult:**
+
 ```typescript
 {
   allowed: boolean;
@@ -262,6 +258,7 @@ Checks if a rate limit would be exceeded without incrementing the counter. Use t
 Increments the rate limit counter. Use this in your rule's `onAllow` hook when not using `defineRateLimitRule`.
 
 **Parameters:**
+
 - `storage`: Storage adapter implementing `RateLimitStorage`
 - `config`: Rate limit configuration object
 - `clock?`: Optional clock function for testing (defaults to `Date.now`)
@@ -279,16 +276,13 @@ The rate limiting extension requires a storage adapter. You can use:
 ### Using Redis Storage
 
 ```typescript
-import { createRedisStorage } from '@bantai-dev/storage-redis';
-import { rateLimit } from '@bantai-dev/with-rate-limit';
+import { createRedisStorage } from "@bantai-dev/storage-redis";
+import { rateLimit } from "@bantai-dev/with-rate-limit";
 
-const redisStorage = createRedisStorage(
-  { url: process.env.REDIS_URL },
-  rateLimit.storageSchema
-);
+const redisStorage = createRedisStorage({ url: process.env.REDIS_URL }, rateLimit.storageSchema);
 
 const rateLimitedContext = withRateLimit(apiContext, {
-  storage: redisStorage,
+    storage: redisStorage,
 });
 ```
 
@@ -297,131 +291,119 @@ const rateLimitedContext = withRateLimit(apiContext, {
 ### Per-User Rate Limiting
 
 ```typescript
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
 const userRateLimitRule = defineRule(
-  rateLimitedContext,
-  'user-rate-limit',
-  async (input, { tools }) => {
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `user:${input.userId}`,
-        type: 'fixed-window',
-        limit: 1000,
-        period: '24h',
-      }
-    );
+    rateLimitedContext,
+    "user-rate-limit",
+    async (input, { tools }) => {
+        const result = await tools.rateLimit.checkRateLimit(tools.storage, {
+            key: `user:${input.userId}`,
+            type: "fixed-window",
+            limit: 1000,
+            period: "24h",
+        });
 
-    return result.allowed ? allow({ reason: 'Rate limit OK' }) : deny({ reason: result.reason });
-  },
-  {
-    onAllow: async (result, input, { tools }) => {
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `user:${input.userId}`,
-          type: 'fixed-window',
-          limit: 1000,
-          period: '24h',
-        }
-      );
+        return result.allowed
+            ? allow({ reason: "Rate limit OK" })
+            : deny({ reason: result.reason });
     },
-  }
+    {
+        onAllow: async (result, input, { tools }) => {
+            await tools.rateLimit.incrementRateLimit(tools.storage, {
+                key: `user:${input.userId}`,
+                type: "fixed-window",
+                limit: 1000,
+                period: "24h",
+            });
+        },
+    }
 );
 ```
 
 ### Endpoint-Specific Rate Limits
 
 ```typescript
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
 const endpointLimits = {
-  '/api/auth/login': { limit: 5, period: '15m' },
-  '/api/payment': { limit: 10, period: '1m' },
-  '/api/search': { limit: 100, period: '1m' },
+    "/api/auth/login": { limit: 5, period: "15m" },
+    "/api/payment": { limit: 10, period: "1m" },
+    "/api/search": { limit: 100, period: "1m" },
 };
 
 const endpointRateLimitRule = defineRule(
-  rateLimitedContext,
-  'endpoint-rate-limit',
-  async (input, { tools }) => {
-    const config = endpointLimits[input.endpoint] || { limit: 50, period: '1h' };
-    
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `endpoint:${input.endpoint}:${input.userId}`,
-        type: 'sliding-window',
-        limit: config.limit,
-        period: config.period,
-      }
-    );
+    rateLimitedContext,
+    "endpoint-rate-limit",
+    async (input, { tools }) => {
+        const config = endpointLimits[input.endpoint] || { limit: 50, period: "1h" };
 
-    return result.allowed ? allow({ reason: 'Rate limit OK' }) : deny({ reason: result.reason });
-  },
-  {
-    onAllow: async (result, input, { tools }) => {
-      const config = endpointLimits[input.endpoint] || { limit: 50, period: '1h' };
-      
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `endpoint:${input.endpoint}:${input.userId}`,
-          type: 'sliding-window',
-          limit: config.limit,
-          period: config.period,
-        }
-      );
+        const result = await tools.rateLimit.checkRateLimit(tools.storage, {
+            key: `endpoint:${input.endpoint}:${input.userId}`,
+            type: "sliding-window",
+            limit: config.limit,
+            period: config.period,
+        });
+
+        return result.allowed
+            ? allow({ reason: "Rate limit OK" })
+            : deny({ reason: result.reason });
     },
-  }
+    {
+        onAllow: async (result, input, { tools }) => {
+            const config = endpointLimits[input.endpoint] || { limit: 50, period: "1h" };
+
+            await tools.rateLimit.incrementRateLimit(tools.storage, {
+                key: `endpoint:${input.endpoint}:${input.userId}`,
+                type: "sliding-window",
+                limit: config.limit,
+                period: config.period,
+            });
+        },
+    }
 );
 ```
 
 ### Tier-Based Rate Limiting
 
 ```typescript
-import { defineRule, allow, deny } from '@bantai-dev/core';
+import { defineRule, allow, deny } from "@bantai-dev/core";
 
 const tierLimits = {
-  free: { limit: 100, period: '1h' },
-  premium: { limit: 1000, period: '1h' },
-  enterprise: { limit: 10000, period: '1h' },
+    free: { limit: 100, period: "1h" },
+    premium: { limit: 1000, period: "1h" },
+    enterprise: { limit: 10000, period: "1h" },
 };
 
 const tierRateLimitRule = defineRule(
-  rateLimitedContext,
-  'tier-rate-limit',
-  async (input, { tools }) => {
-    const config = tierLimits[input.userTier];
-    
-    const result = await tools.rateLimit.checkRateLimit(
-      tools.storage,
-      {
-        key: `tier:${input.userTier}:${input.userId}`,
-        type: 'token-bucket',
-        limit: config.limit,
-        period: '1h', // Refills to full capacity over 1 hour
-      }
-    );
+    rateLimitedContext,
+    "tier-rate-limit",
+    async (input, { tools }) => {
+        const config = tierLimits[input.userTier];
 
-    return result.allowed ? allow({ reason: 'Rate limit OK' }) : deny({ reason: result.reason });
-  },
-  {
-    onAllow: async (result, input, { tools }) => {
-      const config = tierLimits[input.userTier];
-      
-      await tools.rateLimit.incrementRateLimit(
-        tools.storage,
-        {
-          key: `tier:${input.userTier}:${input.userId}`,
-          type: 'token-bucket',
-          limit: config.limit,
-          period: '1h', // Refills to full capacity over 1 hour
-        }
-      );
+        const result = await tools.rateLimit.checkRateLimit(tools.storage, {
+            key: `tier:${input.userTier}:${input.userId}`,
+            type: "token-bucket",
+            limit: config.limit,
+            period: "1h", // Refills to full capacity over 1 hour
+        });
+
+        return result.allowed
+            ? allow({ reason: "Rate limit OK" })
+            : deny({ reason: result.reason });
     },
-  }
+    {
+        onAllow: async (result, input, { tools }) => {
+            const config = tierLimits[input.userTier];
+
+            await tools.rateLimit.incrementRateLimit(tools.storage, {
+                key: `tier:${input.userTier}:${input.userId}`,
+                type: "token-bucket",
+                limit: config.limit,
+                period: "1h", // Refills to full capacity over 1 hour
+            });
+        },
+    }
 );
 ```
 
@@ -451,4 +433,3 @@ The package provides full TypeScript type safety:
 ## License
 
 MIT
-
