@@ -1,19 +1,21 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
-  "changelog": "@changesets/cli/changelog",
-  "commit": false,
-  "fixed": [
-    [
-      "@bantai-dev/core", 
-      "@bantai-dev/with-rate-limit",
-      "@bantai-dev/with-storage", 
-      "@bantai-dev/with-audit", 
-      "@bantai-dev/storage-redis",
-      "@bantai-dev/shared"
-    ]
-  ],
-  "linked": [],
-  "access": "public",
-  "baseBranch": "main",
-  "updateInternalDependencies": "patch"
+    "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+    "changelog": "@changesets/cli/changelog",
+    "commit": false,
+    "linked": [
+        [
+            "@bantai-dev/core",
+            "@bantai-dev/with-rate-limit",
+            "@bantai-dev/with-storage",
+            "@bantai-dev/with-audit",
+            "@bantai-dev/storage-redis",
+            "@bantai-dev/shared",
+            "@bantai-dev/llm",
+            "@bantai-dev/openai",
+            "@bantai-dev/vercel-ai"
+        ]
+    ],
+    "access": "public",
+    "baseBranch": "main",
+    "updateInternalDependencies": "patch"
 }
