@@ -33,13 +33,6 @@ type WithRateLimitTools<
         rateLimit: RateLimitTools<TContext>;
     };
 
-/**
- * Return type for withRateLimit that properly infers the merged context
- */
-export type WithRateLimitReturnType<
-    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
-> = ContextDefinition<WithRateLimitShape<TContext>, WithRateLimitTools<TContext>>;
-
 type WithRateLimitOptions<
     TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
 > = {
@@ -57,7 +50,7 @@ export const withRateLimit = <
 >(
     context: TContext,
     options: WithRateLimitOptions<TContext> = {}
-): WithRateLimitReturnType<TContext> => {
+): WithRateLimitContext<TContext> => {
     // Merge the schemas at runtime
     const mergedSchema = context.schema.extend(rateLimitSchema.partial().shape as z.ZodRawShape);
 
@@ -87,7 +80,7 @@ export const withRateLimit = <
         }),
         storage,
         { storageName: "rateLimit" }
-    ) as WithRateLimitReturnType<TContext>;
+    ) as WithRateLimitContext<TContext>;
 };
 
 /**
@@ -95,4 +88,4 @@ export const withRateLimit = <
  */
 export type WithRateLimitContext<
     TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
-> = WithRateLimitReturnType<TContext>;
+> = ContextDefinition<WithRateLimitShape<TContext>, WithRateLimitTools<TContext>>;

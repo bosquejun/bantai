@@ -1,5 +1,5 @@
-import { ContextDefinition, PolicyDefinition, RuleDefinition } from "src/index.js";
 import { z } from "zod";
+import { ContextDefinition, PolicyDefinition, RuleDefinition } from "../index.js";
 import { auditEventSchema } from "./schema.js";
 
 export type AuditEvent = z.infer<typeof auditEventSchema>;

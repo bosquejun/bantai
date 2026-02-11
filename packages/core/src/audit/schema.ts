@@ -1,7 +1,7 @@
-import { versionSchema } from "src/context/schema.js";
-import { policySchema, policyStrategySchema } from "src/policies/schema.js";
-import { ruleSchema } from "src/rules/schema.js";
 import { z } from "zod";
+import { versionSchema } from "../context/schema.js";
+import { policySchema, policyStrategySchema } from "../policies/schema.js";
+import { ruleSchema } from "../rules/schema.js";
 
 export const auditPolicyMetaSchema = z.object({
     strategy: policyStrategySchema,

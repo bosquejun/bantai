@@ -1,75 +1,76 @@
 {
-  "name": "@bantai-dev/vercel-ai",
-  "version": "1.0.0",
-  "description": "Vercel AI SDK provider for @bantai-dev/llm",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    "name": "@bantai-dev/vercel-ai",
+    "version": "1.0.0",
+    "description": "Vercel AI SDK provider for @bantai-dev/llm",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bosquejun/bantai.git",
+        "directory": "packages/ai/vercel-ai"
+    },
+    "homepage": "https://bantai.vercel.app/",
+    "bugs": {
+        "url": "https://github.com/bosquejun/bantai/issues"
+    },
+    "keywords": [
+        "vercel-ai",
+        "vercel-ai-extension",
+        "ai",
+        "ai-extension",
+        "llm",
+        "policy-engine",
+        "policy-library",
+        "token-control",
+        "token-quota",
+        "bantai"
+    ],
+    "author": {
+        "name": "Jun",
+        "email": "bosquejun@gmail.com"
+    },
+    "license": "MIT",
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://registry.npmjs.org/"
+    },
+    "scripts": {
+        "build": "tsup",
+        "check-types": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest --coverage",
+        "example": "npx tsx --env-file=.env src/example.ts"
+    },
+    "devDependencies": {
+        "@bantai-dev/storage-redis": "workspace:*",
+        "@bantai-dev/typescript-config": "workspace:*",
+        "@openrouter/ai-sdk-provider": "^2.2.1",
+        "tsconfig-paths": "^4.2.0",
+        "tsup": "^8.5.1",
+        "typescript": "5.9.2",
+        "vitest": "^2.1.8"
+    },
+    "dependencies": {
+        "@bantai-dev/core": "workspace:*",
+        "@bantai-dev/llm": "workspace:*",
+        "@bantai-dev/with-rate-limit": "workspace:*",
+        "ai": "^6.0.78",
+        "zod": "^4.3.5"
+    },
+    "peerDependencies": {
+        "zod": "^4.3.5"
     }
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/bosquejun/bantai.git",
-    "directory": "packages/ai/vercel-ai"
-  },
-  "homepage": "https://bantai.vercel.app/",
-  "bugs": {
-    "url": "https://github.com/bosquejun/bantai/issues"
-  },
-  "keywords": [
-    "vercel-ai",
-    "vercel-ai-extension",
-    "ai",
-    "ai-extension",
-    "llm",
-    "policy-engine",
-    "policy-library",
-    "token-control",
-    "token-quota",
-    "bantai"
-  ],
-  "author": {
-    "name": "Jun",
-    "email": "bosquejun@gmail.com"
-  },
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "scripts": {
-    "build": "tsup",
-    "check-types": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest --coverage"
-  },
-  "devDependencies": {
-    "@bantai-dev/storage-redis": "workspace:*",
-    "@bantai-dev/typescript-config": "workspace:*",
-    "@openrouter/ai-sdk-provider": "^2.2.1",
-    "tsconfig-paths": "^4.2.0",
-    "tsup": "^8.5.1",
-    "typescript": "5.9.2",
-    "vitest": "^2.1.8"
-  },
-  "dependencies": {
-    "@bantai-dev/core": "workspace:*",
-    "@bantai-dev/llm": "workspace:*",
-    "@bantai-dev/with-rate-limit": "workspace:*",
-    "ai": "^6.0.78",
-    "zod": "^4.3.5"
-  },
-  "peerDependencies": {
-    "zod": "^4.3.5"
-  }
 }

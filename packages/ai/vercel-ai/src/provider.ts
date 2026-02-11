@@ -1,19 +1,27 @@
-import { LLMProvider } from "@bantai-dev/llm";
-import { generateText, LanguageModel } from "ai";
+import { LLMProvider, WithLLMContext } from "@bantai-dev/llm";
+import { LanguageModel, Output, generateText } from "ai";
 import { convertPromptToVercelAIMessages } from "./utils.js";
 
+type GenerateTextOptions = Omit<Parameters<typeof generateText>[0], "model" | "prompt" | "output">;
+
 export const vercelAI = (model: LanguageModel) => {
-    const adapter: LLMProvider = {
+    const adapter: LLMProvider<WithLLMContext, GenerateTextOptions> = {
         providerName: "vercel-ai",
-        generateText: async (input) => {
-            const prompt = convertPromptToVercelAIMessages(input.llm.prompt);
+        defaultModel: typeof model === "string" ? model : model.modelId,
+        generateText: async (input, options) => {
+            const messages = convertPromptToVercelAIMessages(input.llm.prompt);
+
             const response = await generateText({
+                ...(options?.providerOptions || {}),
                 model,
-                prompt,
+                messages,
+                ...(input.llm.outputSchema
+                    ? { output: Output.object({ schema: input.llm.outputSchema }) }
+                    : {}),
             });
 
             return {
-                text: response.text,
+                output: response.output,
                 usage: {
                     inputTokens: response.usage.inputTokens || 0,
                     outputTokens: response.usage.outputTokens || 0,
@@ -22,7 +30,6 @@ export const vercelAI = (model: LanguageModel) => {
                 providerResponse: response,
             };
         },
-        defaultModel: typeof model === "string" ? model : model.modelId,
     };
     return adapter;
 };

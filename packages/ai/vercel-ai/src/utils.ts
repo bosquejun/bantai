@@ -1,5 +1,6 @@
-import { LLMGenerateTextInput } from "@bantai-dev/llm";
-import { ModelMessage } from "ai";
+import { LLMGenerateTextInput, llmInputObjectSchema } from "@bantai-dev/llm";
+import { ModelMessage, UIMessage } from "ai";
+import { z } from "zod";
 
 export function convertPromptToVercelAIMessages(
     prompt: LLMGenerateTextInput["prompt"]
@@ -10,4 +11,21 @@ export function convertPromptToVercelAIMessages(
               role: p.role,
               content: p.content,
           }));
+}
+
+export function convertUIMessagesToPrompt(uiMessages: UIMessage[]): LLMGenerateTextInput["prompt"] {
+    return uiMessages.reduce(
+        (acc, m) => {
+            m.parts.forEach((p) => {
+                if (p.type === "text") {
+                    (acc as z.infer<typeof llmInputObjectSchema>[]).push({
+                        role: m.role,
+                        content: p.text,
+                    });
+                }
+            });
+            return acc;
+        },
+        [] as LLMGenerateTextInput["prompt"]
+    );
 }

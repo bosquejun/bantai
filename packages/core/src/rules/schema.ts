@@ -1,5 +1,5 @@
-import { versionSchema } from "src/context/schema.js";
 import { z } from "zod";
+import { versionSchema } from "../context/schema.js";
 
 export const ruleFnContextSchema = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) => {
     return z

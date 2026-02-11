@@ -4,17 +4,26 @@ export type {
     AuditHandler,
     AuditSink,
     AuditTool,
-    CreateAuditEvent
+    CreateAuditEvent,
 } from "./audit/types.js";
 export {
     defineContext,
     type ContextDefinition,
     type ExtractContextShape,
-    type ExtractContextTools
+    type ExtractContextTools,
 } from "./context/define-context.js";
 export { definePolicy, type PolicyDefinition } from "./policies/define-policy.js";
-export { evaluatePolicy, type ExtractPolicyContext, type ExtractRuleFromPolicy, type PolicyResult } from "./policies/evaluate-policy.js";
+export {
+    evaluatePolicy,
+    type ExtractContextInput,
+    type PolicyResult,
+} from "./policies/evaluate-policy.js";
 export { defineRule, type RuleDefinition } from "./rules/define-rule.js";
 export { allow, deny, skip, type RuleResult } from "./rules/results.js";
 
-export { BantaiError, BantaiErrorType } from "./errors/index.js";
+export {
+    BantaiError,
+    BantaiErrorType,
+    PolicyViolationError,
+    throwPolicyViolationErrorOnDeny,
+} from "./errors/index.js";

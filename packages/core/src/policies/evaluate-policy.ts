@@ -9,7 +9,7 @@ import { ruleSchema } from "../rules/schema.js";
 import { PolicyDefinition } from "./define-policy.js";
 import { PolicyResult, PolicyStrategy, policyResultSchema } from "./schema.js";
 
-type ExtractContextInput<TContext> =
+export type ExtractContextInput<TContext> =
     TContext extends ContextDefinition<infer S>
         ? S extends z.ZodRawShape
             ? z.infer<z.ZodObject<S>>

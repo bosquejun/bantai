@@ -47,23 +47,13 @@ export type WithLLMBaseContext<
     }
 >;
 
-/**
- * Return type for withLLMContext that properly infers the merged context
- * This directly extends ContextDefinition so it can be used without casting
- * It applies withRateLimit to the LLM-extended context, which merges both shapes
- */
-export type WithLLMReturnType<
-    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
-> = WithRateLimitContext<WithLLMBaseContext<TContext>>;
-
 export type TokenUsageEstimator = (prompt: LLMGenerateTextInput["prompt"]) => Promise<number>;
 
 /**
  * Options for withLLMContext
  */
-type WithLLMOptions<TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>> = {
+type WithLLMOptions = {
     storage?: RateLimitStorage;
-    generateKey?: (input: ExtractContextShape<TContext>) => string;
     tokenUsageEstimator?: TokenUsageEstimator;
 };
 
@@ -72,7 +62,7 @@ type WithLLMOptions<TContext extends ContextDefinition<z.ZodRawShape, Record<str
  */
 export function withLLMContext<
     TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
->(context: TContext, options: WithLLMOptions<TContext> = {}): WithLLMReturnType<TContext> {
+>(context: TContext, options: WithLLMOptions = {}): WithLLMContext<TContext> {
     const mergedSchema = context.schema.extend({
         llm: llmGenerateTextInputSchema.partial().optional(),
     });
@@ -84,22 +74,16 @@ export function withLLMContext<
         },
     };
 
-    const baseContext = defineContext(mergedSchema, {
+    const ctx = defineContext(mergedSchema, {
         defaultValues: context.defaultValues,
         tools,
     });
 
-    const extendedContext = withRateLimit(baseContext, {
-        generateKey(input) {
-            return `llm:${input})`;
-        },
+    const extendedContext = withRateLimit(ctx, {
         storage: options.storage,
     });
 
-    // TypeScript can't verify the complex nested type equivalence due to structural type checking limitations
-    // The runtime types are correct, but TypeScript requires this assertion to bridge the type gap
-    // This pattern is consistent with how withRateLimit handles its return type (see with-rate-limit.ts:90)
-    return extendedContext as unknown as WithLLMReturnType<TContext>;
+    return extendedContext as unknown as WithLLMContext<TContext>;
 }
 
 /**
@@ -107,8 +91,7 @@ export function withLLMContext<
  * The LLM schema is properly inferred as part of the context shape
  * This ensures that ExtractContextShape<WithLLMContext<TContext>> includes the 'llm' property
  *
- * WithLLMReturnType extends ContextDefinition through WithRateLimitReturnType
  */
 export type WithLLMContext<
-    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>>,
-> = WithLLMReturnType<TContext>;
+    TContext extends ContextDefinition<z.ZodRawShape, Record<string, unknown>> = any,
+> = WithRateLimitContext<WithLLMBaseContext<TContext>>;
