@@ -3,11 +3,17 @@ import { ContextSelector } from "@/features/context/components/ContextSelector";
 import { PoliciesPanel } from "@/features/policies/components/PoliciesPanel";
 import { RulesPanel } from "@/features/rules/components/RulesPanel";
 import { SimulationConsole } from "@/features/simulation/components/SimulationConsole";
+import { loadPlaygroundDeps } from "@/lib/load-playground-deps";
+import { initMonaco } from "@/lib/monaco";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import { MobileUnsupported } from "@/shared/components/MobileUnsupported";
+import { PackageManagerPopover } from "@/shared/components/PackageManagerPopover";
 import { TopBar } from "@/shared/components/TopBar";
 import { useBantaiStore } from "@/shared/store/store";
-import React, { useEffect, useRef, useState } from "react";
+import { useMonaco } from "@monaco-editor/react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
+await initMonaco();
 
 const App: React.FC = () => {
     const {
@@ -19,6 +25,22 @@ const App: React.FC = () => {
         hasActiveErrors,
         theme,
     } = useBantaiStore();
+    const setPackageDownloading = useBantaiStore((state) => state.setPackageDownloading);
+    const setPackageInstalling = useBantaiStore((state) => state.setPackageInstalling);
+    const setPackageInstalled = useBantaiStore((state) => state.setPackageInstalled);
+    const setPackageError = useBantaiStore((state) => state.setPackageError);
+    
+    const packageManager = useMemo(
+        () => ({
+            setPackageDownloading,
+            setPackageInstalling,
+            setPackageInstalled,
+            setPackageError,
+        }),
+        [setPackageDownloading, setPackageInstalling, setPackageInstalled, setPackageError]
+    );
+    
+    const monaco = useMonaco();
 
     const [paneWidths, setPaneWidths] = useState([30, 35, 35]);
     const [isContextCollapsed, setIsContextCollapsed] = useState(false);
@@ -35,6 +57,20 @@ const App: React.FC = () => {
             document.documentElement.classList.remove("dark");
         }
     }, [theme]);
+
+    useEffect(() => {
+        if (!monaco) return;
+        loadPlaygroundDeps({
+            monaco,
+            packageManager,
+        })
+            .then(() => {
+                console.log("Playground dependencies loaded");
+            })
+            .catch((error) => {
+                console.error("Failed to load playground dependencies:", error);
+            });
+    }, [monaco, packageManager]);
 
     const handleResize = (index: number, e: React.MouseEvent) => {
         if (isContextCollapsed && index === 0) return;
@@ -152,6 +188,7 @@ const App: React.FC = () => {
                     <span className="uppercase tracking-wider">Context: {activeContext?.name}</span>
                 </div>
                 <div className="flex items-center gap-4">
+                    <PackageManagerPopover />
                     <span>UTF-8</span>
                     <span>TypeScript</span>
                 </div>

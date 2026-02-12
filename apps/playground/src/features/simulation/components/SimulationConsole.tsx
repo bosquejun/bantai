@@ -142,9 +142,18 @@ export const SimulationConsole: React.FC = () => {
                                     onChange={(val) => setSimulationInput(val || "")}
                                     options={{
                                         lineNumbers: "on",
+                                        minimap: { enabled: false },
+                                        fixedOverflowWidgets: true,
                                         folding: true,
-                                        glyphMargin: false,
-                                        lineDecorationsWidth: 0,
+                                        lineNumbersMinChars: 3,
+                                        scrollbar: {
+                                            vertical: "hidden",
+                                            horizontal: "hidden",
+                                            alwaysConsumeMouseWheel: false,
+                                        },
+                                        wordWrap: "on",
+                                        wrappingIndent: "deepIndent",
+                                        wrappingStrategy: "advanced",
                                     }}
                                 />
                             </div>

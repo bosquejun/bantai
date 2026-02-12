@@ -6,6 +6,7 @@ import { Editor } from "@/features/editor/components/Editor";
 import type { EditorProps } from "@monaco-editor/react";
 import { AlertCircle, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import React from "react";
+import { defaultEditorOptions } from "../utils/editor-options";
 
 type CollapsibleEditorCardProps = {
     title: string;
@@ -99,26 +100,12 @@ export const CollapsibleEditorCard: React.FC<CollapsibleEditorCardProps> = ({
                         <Editor
                             {...editorProps}
                             options={{
-                                lineNumbers: "on",
-                                minimap: { enabled: false },
-                                fixedOverflowWidgets: true,
-                                folding: true,
-                                lineNumbersMinChars: 2,
+                                ...defaultEditorOptions,
                                 ...(editorProps?.options || {}),
                                 scrollbar: {
-                                    vertical: "hidden",
-                                    horizontal: "hidden",
-                                    alwaysConsumeMouseWheel: false,
+                                    ...defaultEditorOptions.scrollbar,
                                     ...(editorProps?.options?.scrollbar || {}),
                                 },
-                                // 1. Enable wrapping
-                                wordWrap: "on",
-
-                                // 2. Control the indentation of wrapped lines
-                                wrappingIndent: "same",
-
-                                // 3. Optional: Use 'advanced' for better wrapping at the edge
-                                wrappingStrategy: "advanced",
                             }}
                         />
                     </div>

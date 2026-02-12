@@ -1,5 +1,5 @@
 import { useBantaiStore } from "@/shared/store/store";
-import { EditorProps, Editor as Monaco } from "@monaco-editor/react";
+import { Editor as Monaco, type EditorProps } from "@monaco-editor/react";
 import React from "react";
 
 // Use type intersection to ensure all EditorProps are correctly inherited

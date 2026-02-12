@@ -1,9 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Editor } from "@/features/editor/components/Editor";
+import { useDebounceCallback } from "@/hooks/use-debounce-callback";
+import { transpileCode } from "@/lib/monaco";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
+import { useCurrentWorkspace } from "@/shared/store/store";
 import type { Context } from "@/shared/types";
+import { defaultEditorOptions } from "@/shared/utils/editor-options";
+import { useMonaco, type OnMount } from "@monaco-editor/react";
 import { PanelLeftClose, PanelLeftOpen, RotateCcw, Save } from "lucide-react";
-import React from "react";
+import * as monaco from "monaco-editor";
+import React, { useCallback, useEffect, useRef } from "react";
 
 interface ContextPanelProps {
     isCollapsed: boolean;
@@ -28,6 +34,105 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
     updateContext,
     width,
 }) => {
+    const monaco = useMonaco();
+    const editorRef = useRef<monaco.editor.ICodeEditor | null>(null);
+    const workspace = useCurrentWorkspace();
+    const fileModel = useRef<monaco.editor.ITextModel | null>(null);
+
+    const handleTranspile = useCallback(
+        // eslint-disable-next-line react-hooks/use-memo
+        useDebounceCallback(async (code: string) => {
+            if (!monaco || !editorRef.current) return;
+            if (fileModel.current && code) {
+                // 3. Wrap the user's input and update the background model
+                const wrappedCode = `export const appContext = ${code};\nexport default appContext;`;
+                fileModel.current.setValue(wrappedCode);
+
+                const globalContextDts = `${workspace}/context-global.d.ts`;
+                const declaration = `
+    import { appContext as TContext } from "${workspace}/context";
+
+    declare global {
+        const appContext: typeof TContext;
+    }
+    export {};`;
+                (monaco as any).languages.typescript.typescriptDefaults.addExtraLib(
+                    declaration,
+                    globalContextDts
+                );
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            activeContextId &&
+                updateContext(activeContextId, {
+                    definition: code || "",
+                });
+
+            const { errors, transpiledCodes } = await transpileCode(monaco, editorRef.current);
+
+            if (errors.length && activeContextId) {
+                updateContext(activeContextId, {
+                    errors: errors.map((err) => ({
+                        message: err.message,
+                        line: err.line,
+                        source: "Context Definition",
+                    })),
+                });
+            }
+
+            console.log("Errors:", errors);
+            console.log("Transpiled Codes:", transpiledCodes);
+        }, 300),
+        [monaco, editorRef, fileModel.current]
+    );
+
+    const handleSave = useCallback(async () => {
+        if (!monaco || !editorRef.current) return;
+        const { errors } = await transpileCode(monaco, editorRef.current);
+        if (errors.length && activeContextId) {
+            updateContext(activeContextId, {
+                errors: errors.map((err) => ({
+                    message: err.message,
+                    line: err.line,
+                    source: "Context Definition",
+                })),
+            });
+        } else {
+            editorRef.current.focus();
+
+            // Trigger the 'Format Document' action
+            editorRef.current.trigger(
+                "context-format-on-save",
+                "editor.action.formatDocument",
+                null
+            );
+            onSave();
+        }
+    }, [monaco, editorRef, activeContextId, updateContext]);
+
+    const handleEditorDidMount: OnMount = (editor) => {
+        // Save the editor instance to the ref
+        editorRef.current = editor;
+
+        if (monaco) {
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, handleSave);
+        }
+    };
+
+    useEffect(() => {
+        if (!monaco || !editorRef.current) return;
+        const path = monaco?.Uri?.parse(`${workspace}/context.ts`);
+        if (!monaco.editor.getModel(path)) {
+            fileModel.current = monaco.editor.createModel(
+                "", // Start empty
+                "typescript",
+                path
+            );
+        }
+
+        handleTranspile(activeContext?.definition || "");
+    }, [monaco, editorRef.current]);
+
     return (
         <div
             style={{ width }}
@@ -61,7 +166,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={onSave}
+                                onClick={handleSave}
                                 disabled={activeErrors}
                                 className="h-7 w-7"
                                 title={activeErrors ? "Fix errors to save" : "Save context"}
@@ -96,12 +201,10 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                     <div className="flex-1 flex flex-col min-h-0">
                         <Editor
                             value={activeContext?.definition || ""}
-                            onChange={(val) =>
-                                activeContextId &&
-                                updateContext(activeContextId, {
-                                    definition: val || "",
-                                })
-                            }
+                            onChange={(value) => handleTranspile(value || "")}
+                            options={defaultEditorOptions}
+                            onMount={handleEditorDidMount}
+                            path={`${workspace}/preview/context.ts`}
                         />
                     </div>
                     <CompilationErrorPanel

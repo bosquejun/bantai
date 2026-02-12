@@ -1,11 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useDebounceCallback } from "@/hooks/use-debounce-callback";
+import { transpileCode } from "@/lib/monaco";
 import { CollapsibleEditorCard } from "@/shared/components/CollapsibleEditorCard";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
-import { useBantaiStore } from "@/shared/store/store";
+import { useBantaiStore, useCurrentWorkspace } from "@/shared/store/store";
 import type { Rule } from "@/shared/types";
+import type { OnMount } from "@monaco-editor/react";
 import { FileCode, ListCollapse, ListTree, Plus, Save, Search, X } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import * as monaco from "monaco-editor";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface RuleItemProps {
     rule: Rule;
@@ -25,6 +29,95 @@ const RuleItem: React.FC<RuleItemProps> = ({
     deleteRule,
 }) => {
     const hasErrors = rule.errors.length > 0;
+    const editorRef = useRef<monaco.editor.ICodeEditor | null>(null);
+    const previewWorkspace = useCurrentWorkspace("/preview/rules");
+    const rulesWorkspace = useCurrentWorkspace("/rules");
+    const fileModel = useRef<monaco.editor.ITextModel | null>(null);
+
+    const handleTranspile = useCallback(
+        // eslint-disable-next-line react-hooks/use-memo
+        useDebounceCallback(async (code: string) => {
+            if (!monaco || !editorRef.current) return;
+            if (fileModel.current && code) {
+                // 3. Wrap the user's input and update the background model
+                const wrappedCode = `import appContext from '../context';
+                const rule = ${code}
+
+                export default rule;
+                `;
+                fileModel.current.setValue(wrappedCode);
+            }
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            contextId &&
+                updateRule(contextId, rule.id, {
+                    code: code || "",
+                });
+
+            const { errors, transpiledCodes } = await transpileCode(monaco, editorRef.current);
+
+            if (errors.length && contextId) {
+                updateRule(contextId, rule.id, {
+                    errors: errors.map((err) => ({
+                        message: err.message,
+                        line: err.line,
+                        source: "Rule",
+                    })),
+                });
+            }
+
+            console.log("Errors:", errors);
+            console.log("Transpiled Codes:", transpiledCodes);
+        }, 300),
+        [monaco, editorRef, fileModel.current]
+    );
+
+    const handleSave = useCallback(async () => {
+        if (!monaco || !editorRef.current) return;
+        const { errors } = await transpileCode(monaco, editorRef.current);
+        if (errors.length && contextId) {
+            updateRule(contextId, rule.id, {
+                errors: errors.map((err) => ({
+                    message: err.message,
+                    line: err.line,
+                    source: "Rule",
+                })),
+            });
+        } else {
+            editorRef.current.focus();
+
+            // Trigger the 'Format Document' action
+            editorRef.current.trigger(
+                "context-format-on-save",
+                "editor.action.formatDocument",
+                null
+            );
+        }
+    }, [monaco, editorRef, contextId, updateRule, onToggle]);
+
+    const handleEditorDidMount: OnMount = (editor) => {
+        // Save the editor instance to the ref
+        editorRef.current = editor;
+
+        if (monaco) {
+            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, handleSave);
+        }
+    };
+
+    useEffect(() => {
+        if (!monaco || !editorRef.current) return;
+        const path = monaco?.Uri?.parse(`${rulesWorkspace}/${rule.id}.ts`);
+        console.log({ path, preview: `${previewWorkspace}/${rule.id}.ts` });
+        if (!monaco.editor.getModel(path)) {
+            fileModel.current = monaco.editor.createModel(
+                "", // Start empty
+                "typescript",
+                path
+            );
+        }
+
+        handleTranspile(rule.code || "");
+    }, [monaco, editorRef.current, fileModel.current]);
 
     return (
         <CollapsibleEditorCard
@@ -44,6 +137,8 @@ const RuleItem: React.FC<RuleItemProps> = ({
             editorProps={{
                 value: rule.code,
                 onChange: (val) => updateRule(contextId, rule.id, { code: val || "" }),
+                path: `${previewWorkspace}/${rule.id}.ts`,
+                onMount: handleEditorDidMount,
             }}
         />
     );
