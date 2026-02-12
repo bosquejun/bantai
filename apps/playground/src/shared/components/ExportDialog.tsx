@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Copy, Download, Check, FileJson } from 'lucide-react';
 import { Editor } from '@/features/editor/components/Editor';
-import { Context } from '@/shared/types';
+import type { Workspace } from '@/shared/store/workspace/types/workspaceStore.types';
 import {
   Dialog,
   DialogContent,
@@ -15,23 +15,23 @@ import { Button } from '@/components/ui/button';
 interface ExportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  context: Context | undefined;
+  workspace: Workspace | undefined;
 }
 
-export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, context }) => {
+export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, workspace }) => {
   const [copied, setCopied] = useState(false);
 
   const exportData = useMemo(() => {
-    if (!context) return '';
+    if (!workspace) return '';
     const data = {
-      name: context.name,
-      definition: context.definition,
-      rules: context.rules.map(r => ({ 
+      name: workspace.name,
+      definition: workspace.context,
+      rules: workspace.rules.map(r => ({ 
         name: r.name, 
         code: r.code, 
         enabled: r.enabled 
       })),
-      policies: context.policies.map(p => ({ 
+      policies: workspace.policies.map(p => ({ 
         name: p.name, 
         code: p.code, 
         enabled: p.enabled 
@@ -40,9 +40,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, con
       version: "1.0.0"
     };
     return JSON.stringify(data, null, 2);
-  }, [context]);
+  }, [workspace]);
 
-  if (!context) return null;
+  if (!workspace) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(exportData);
@@ -55,7 +55,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, con
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bantai-${context.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+    a.download = `bantai-${workspace.name.toLowerCase().replace(/\s+/g, '-')}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -73,7 +73,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, con
             <div>
               <DialogTitle>Export Bundle</DialogTitle>
               <DialogDescription className="text-[10px] uppercase font-extrabold tracking-widest">
-                {context.name}
+                {workspace.name}
               </DialogDescription>
             </div>
           </div>
@@ -109,7 +109,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({ isOpen, onClose, con
 
         <DialogFooter className="flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[11px] text-muted-foreground max-w-[320px] leading-relaxed italic text-center sm:text-left">
-            This bundle contains the full schema, ruleset, and policies for the current context.
+            This bundle contains the full schema, ruleset, and policies for the current workspace.
           </p>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">

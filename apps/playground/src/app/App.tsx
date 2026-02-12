@@ -9,26 +9,28 @@ import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import { MobileUnsupported } from "@/shared/components/MobileUnsupported";
 import { PackageManagerPopover } from "@/shared/components/PackageManagerPopover";
 import { TopBar } from "@/shared/components/TopBar";
-import { useBantaiStore } from "@/shared/store/store";
+import {
+    useActiveWorkspace,
+    useWorkspaceStore,
+    useGlobalStore,
+    usePackagesStore,
+} from "@/shared/store";
 import { useMonaco } from "@monaco-editor/react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 await initMonaco();
 
 const App: React.FC = () => {
-    const {
-        activeContextId,
-        contexts,
-        updateContext,
-        saveActiveContext,
-        discardActiveChanges,
-        hasActiveErrors,
-        theme,
-    } = useBantaiStore();
-    const setPackageDownloading = useBantaiStore((state) => state.setPackageDownloading);
-    const setPackageInstalling = useBantaiStore((state) => state.setPackageInstalling);
-    const setPackageInstalled = useBantaiStore((state) => state.setPackageInstalled);
-    const setPackageError = useBantaiStore((state) => state.setPackageError);
+    const activeWorkspace = useActiveWorkspace();
+    const updateContext = useWorkspaceStore((state) => state.updateContext);
+    const saveActiveWorkspace = useWorkspaceStore((state) => state.saveActiveWorkspace);
+    const discardActiveChanges = useWorkspaceStore((state) => state.discardActiveChanges);
+    const hasActiveErrors = useWorkspaceStore((state) => state.hasActiveErrors);
+    const theme = useGlobalStore((state) => state.theme);
+    const setPackageDownloading = usePackagesStore((state) => state.setPackageDownloading);
+    const setPackageInstalling = usePackagesStore((state) => state.setPackageInstalling);
+    const setPackageInstalled = usePackagesStore((state) => state.setPackageInstalled);
+    const setPackageError = usePackagesStore((state) => state.setPackageError);
     
     const packageManager = useMemo(
         () => ({
@@ -46,7 +48,6 @@ const App: React.FC = () => {
     const [isContextCollapsed, setIsContextCollapsed] = useState(false);
     const [isDiscardOpen, setIsDiscardOpen] = useState(false);
 
-    const activeContext = contexts.find((c) => c.id === activeContextId);
     const rafRef = useRef<number | null>(null);
     const activeErrors = hasActiveErrors();
 
@@ -141,12 +142,12 @@ const App: React.FC = () => {
                     <ContextPanel
                         isCollapsed={isContextCollapsed}
                         onToggle={toggleContext}
-                        activeContext={activeContext}
-                        activeContextId={activeContextId}
+                        activeWorkspace={activeWorkspace}
+                        activeWorkspaceId={activeWorkspace?.id || null}
                         activeErrors={activeErrors}
-                        onSave={saveActiveContext}
+                        onSave={saveActiveWorkspace}
                         onDiscardOpen={() => setIsDiscardOpen(true)}
-                        updateContext={updateContext}
+                        updateContext={(id, context) => updateContext(id, context)}
                         width={isContextCollapsed ? "40px" : `${paneWidths[0]}%`}
                     />
 
@@ -185,7 +186,7 @@ const App: React.FC = () => {
                     <span className="flex items-center gap-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Engine Ready
                     </span>
-                    <span className="uppercase tracking-wider">Context: {activeContext?.name}</span>
+                    <span className="uppercase tracking-wider">Workspace: {activeWorkspace?.name}</span>
                 </div>
                 <div className="flex items-center gap-4">
                     <PackageManagerPopover />

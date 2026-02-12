@@ -1,31 +1,37 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBantaiStore } from "@/shared/store/store";
+import {
+    useWorkspaceStore,
+    useActiveWorkspace,
+} from "@/shared/store";
 import { ChevronDown, Plus, Search, Trash2 } from "lucide-react";
 import React, { useState } from "react";
 import { NewContextDialog } from "./NewContextDialog";
 
 export const ContextSelector: React.FC = () => {
-    const { contexts, activeContextId, setActiveContext, addContext, deleteContext } =
-        useBantaiStore();
+    const workspaces = useWorkspaceStore((state) => state.workspaces);
+    const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+    const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
+    const addWorkspace = useWorkspaceStore((state) => state.addWorkspace);
+    const deleteWorkspace = useWorkspaceStore((state) => state.deleteWorkspace);
+    const activeWorkspace = useActiveWorkspace();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [search, setSearch] = useState("");
 
-    const activeContext = contexts.find((c) => c.id === activeContextId);
-    const filteredContexts = contexts.filter((c) =>
-        c.name.toLowerCase().includes(search.toLowerCase())
+    const filteredWorkspaces = workspaces.filter((w) =>
+        w.name.toLowerCase().includes(search.toLowerCase())
     );
 
     const handleCreate = (name: string) => {
-        addContext(name);
+        addWorkspace(name);
     };
 
-    const isContextDirty = (ctx: any) => {
+    const isWorkspaceDirty = (ws: any) => {
         return (
-            ctx.isDirty ||
-            ctx.rules.some((r: any) => r.isDirty) ||
-            ctx.policies.some((p: any) => p.isDirty)
+            ws.isDirty ||
+            ws.rules.some((r: any) => r.isDirty) ||
+            ws.policies.some((p: any) => p.isDirty)
         );
     };
 
@@ -34,20 +40,20 @@ export const ContextSelector: React.FC = () => {
     return (
         <div className="h-12 border-b border-border flex items-center px-4 bg-muted/50 gap-4 shrink-0 s">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-widest">
-                Context
+                Workspace
             </div>
 
             <div className="relative">
                 <Button
                     variant="outline"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className={`min-w-[200px] justify-between ${activeContext && isContextDirty(activeContext) ? "border-primary shadow-sm" : ""}`}
+                    className={`min-w-[200px] justify-between ${activeWorkspace && isWorkspaceDirty(activeWorkspace) ? "border-primary shadow-sm" : ""}`}
                 >
                     <div className="flex items-center gap-2 overflow-hidden">
                         <span className="truncate">
-                            {activeContext?.name || "Select context..."}
+                            {activeWorkspace?.name || "Select workspace..."}
                         </span>
-                        {activeContext && isContextDirty(activeContext) && (
+                        {activeWorkspace && isWorkspaceDirty(activeWorkspace) && (
                             <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                         )}
                     </div>
@@ -76,7 +82,7 @@ export const ContextSelector: React.FC = () => {
                                 <Input
                                     autoFocus
                                     type="text"
-                                    placeholder="Search contexts..."
+                                    placeholder="Search workspaces..."
                                     className="pl-8"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -84,23 +90,23 @@ export const ContextSelector: React.FC = () => {
                             </div>
                             <ScrollArea className="max-h-60">
                                 <div className="p-1">
-                                    {filteredContexts.map((ctx) => (
+                                    {filteredWorkspaces.map((ws) => (
                                         <div
-                                            key={ctx.id}
+                                            key={ws.id}
                                             onClick={() => {
-                                                setActiveContext(ctx.id);
+                                                setActiveWorkspace(ws.id);
                                                 setIsDropdownOpen(false);
                                                 setSearch("");
                                             }}
-                                            className={`group flex items-center justify-between px-3 py-2 rounded-md cursor-pointer s mb-0.5 ${ctx.id === activeContextId ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
+                                            className={`group flex items-center justify-between px-3 py-2 rounded-md cursor-pointer s mb-0.5 ${ws.id === activeWorkspaceId ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"}`}
                                         >
                                             <div className="flex items-center gap-2 truncate mr-2">
                                                 <span className="text-sm truncate font-medium">
-                                                    {ctx.name}
+                                                    {ws.name}
                                                 </span>
-                                                {isContextDirty(ctx) && (
+                                                {isWorkspaceDirty(ws) && (
                                                     <div
-                                                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${ctx.id === activeContextId ? "bg-accent-foreground" : "bg-primary"}`}
+                                                        className={`w-1.5 h-1.5 rounded-full shrink-0 ${ws.id === activeWorkspaceId ? "bg-accent-foreground" : "bg-primary"}`}
                                                     />
                                                 )}
                                             </div>
@@ -110,8 +116,8 @@ export const ContextSelector: React.FC = () => {
                                                 className="h-6 w-6 opacity-0 group-hover:opacity-100"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (confirm(`Delete context "${ctx.name}"?`)) {
-                                                        deleteContext(ctx.id);
+                                                    if (confirm(`Delete workspace "${ws.name}"?`)) {
+                                                        deleteWorkspace(ws.id);
                                                     }
                                                 }}
                                             >
@@ -119,9 +125,9 @@ export const ContextSelector: React.FC = () => {
                                             </Button>
                                         </div>
                                     ))}
-                                    {filteredContexts.length === 0 && (
+                                    {filteredWorkspaces.length === 0 && (
                                         <div className="py-8 text-center text-xs text-muted-foreground italic">
-                                            No contexts found
+                                            No workspaces found
                                         </div>
                                     )}
                                 </div>
@@ -133,7 +139,7 @@ export const ContextSelector: React.FC = () => {
                                     onClick={() => setIsDialogOpen(true)}
                                 >
                                     <Plus size={14} />
-                                    <span>New Context</span>
+                                    <span>New Workspace</span>
                                 </Button>
                             </div>
                         </div>
@@ -144,7 +150,7 @@ export const ContextSelector: React.FC = () => {
             <div className="flex items-center gap-3 ml-auto text-[11px] text-muted-foreground font-mono">
                 <span>
                     Updated:{" "}
-                    {new Date(activeContext?.lastModified || Date.now()).toLocaleTimeString()}
+                    {new Date(activeWorkspace?.lastModified || Date.now()).toLocaleTimeString()}
                 </span>
             </div>
 

@@ -1,31 +1,33 @@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useBantaiStore } from "@/shared/store/store";
+import {
+    useWorkspaceStore,
+    useGlobalStore,
+    useSimulationStore,
+} from "@/shared/store";
 import { Check, Download, Loader2, Moon, Play, RotateCcw, Save, Sun } from "lucide-react";
 import React, { useState } from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ExportDialog } from "./ExportDialog";
 
 export const TopBar: React.FC = () => {
-    const {
-        contexts,
-        activeContextId,
-        runSimulation,
-        isSimulationRunning,
-        saveAll,
-        isAnyDirty,
-        theme,
-        toggleTheme,
-        hasGlobalErrors,
-        discardActiveChanges,
-    } = useBantaiStore();
+    const workspaces = useWorkspaceStore((state) => state.workspaces);
+    const activeWorkspaceId = useWorkspaceStore((state) => state.activeWorkspaceId);
+    const saveAll = useWorkspaceStore((state) => state.saveAll);
+    const isAnyDirty = useWorkspaceStore((state) => state.isAnyDirty);
+    const hasGlobalErrors = useWorkspaceStore((state) => state.hasGlobalErrors);
+    const discardActiveChanges = useWorkspaceStore((state) => state.discardActiveChanges);
+    const runSimulation = useSimulationStore((state) => state.runSimulation);
+    const isSimulationRunning = useSimulationStore((state) => state.isSimulationRunning);
+    const theme = useGlobalStore((state) => state.theme);
+    const toggleTheme = useGlobalStore((state) => state.toggleTheme);
 
     const [isSaving, setIsSaving] = useState(false);
     const [showSaved, setShowSaved] = useState(false);
     const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
     const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
-    const activeContext = contexts.find((c) => c.id === activeContextId);
+    const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
     const dirty = isAnyDirty();
     const errorsExist = hasGlobalErrors();
 
@@ -138,7 +140,7 @@ export const TopBar: React.FC = () => {
             <ExportDialog
                 isOpen={isExportDialogOpen}
                 onClose={() => setIsExportDialogOpen(false)}
-                context={activeContext}
+                workspace={activeWorkspace}
             />
         </div>
     );

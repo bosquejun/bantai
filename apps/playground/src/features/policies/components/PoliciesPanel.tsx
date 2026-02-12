@@ -2,23 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CollapsibleEditorCard } from "@/shared/components/CollapsibleEditorCard";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
-import { useBantaiStore } from "@/shared/store/store";
+import { useCurrentWorkspace, useActivePolicies, usePoliciesStore, useWorkspaceStore } from "@/shared/store";
 import type { Policy } from "@/shared/types";
 import { ListCollapse, ListTree, Plus, Save, Search, ShieldCheck, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 
 interface PolicyItemProps {
     policy: Policy;
-    contextId: string;
     isExpanded: boolean;
     onToggle: () => void;
-    updatePolicy: (contextId: string, policyId: string, updates: Partial<Policy>) => void;
-    deletePolicy: (contextId: string, policyId: string) => void;
+    updatePolicy: (policyId: string, updates: Partial<Policy>) => void;
+    deletePolicy: (policyId: string) => void;
 }
 
 const PolicyItem: React.FC<PolicyItemProps> = ({
     policy,
-    contextId,
     isExpanded,
     onToggle,
     updatePolicy,
@@ -39,56 +37,53 @@ const PolicyItem: React.FC<PolicyItemProps> = ({
             onToggle={onToggle}
             hasErrors={hasErrors}
             isDirty={policy.isDirty}
-            onTitleChange={(name) => updatePolicy(contextId, policy.id, { name })}
-            onDelete={() => deletePolicy(contextId, policy.id)}
+            onTitleChange={(name) => updatePolicy(policy.id, { name })}
+            onDelete={() => deletePolicy(policy.id)}
             editorProps={{
                 value: policy.code,
-                onChange: (val) => updatePolicy(contextId, policy.id, { code: val || "" }),
+                onChange: (val) => updatePolicy(policy.id, { code: val || "" }),
             }}
         />
     );
 };
 
 export const PoliciesPanel: React.FC = () => {
-    const { contexts, activeContextId, addPolicy, updatePolicy, deletePolicy, saveActiveContext } =
-        useBantaiStore();
-    const context = contexts.find((c) => c.id === activeContextId);
+    const policies = useActivePolicies();
+    const { addPolicy, updatePolicy, deletePolicy } = usePoliciesStore();
+    const saveActiveWorkspace = useWorkspaceStore((state) => state.saveActiveWorkspace);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchVisible, setIsSearchVisible] = useState(false);
 
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-    const prevPolicyCount = React.useRef(context?.policies.length || 0);
+    const prevPolicyCount = React.useRef(policies.length || 0);
     useEffect(() => {
-        if (context && context.policies.length > prevPolicyCount.current) {
-            const latestPolicy = context.policies[0];
+        if (policies.length > prevPolicyCount.current) {
+            const latestPolicy = policies[0];
             setExpandedIds((prev) => new Set(prev).add(latestPolicy.id));
         }
-        prevPolicyCount.current = context?.policies.length || 0;
-    }, [context?.policies.length]);
+        prevPolicyCount.current = policies.length || 0;
+    }, [policies.length]);
 
     const filteredPolicies = useMemo(() => {
-        if (!context) return [];
-        return context.policies.filter((p) =>
+        return policies.filter((p) =>
             p.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    }, [context, searchQuery]);
+    }, [policies, searchQuery]);
 
     const anyDirty = useMemo(() => {
-        return context?.policies.some((p) => p.isDirty);
-    }, [context]);
+        return policies.some((p) => p.isDirty);
+    }, [policies]);
 
     const aggregateErrors = useMemo(() => {
-        if (!context) return [];
-        return context.policies.flatMap((p) => p.errors.map((err) => ({ ...err, source: p.name })));
-    }, [context]);
+        return policies.flatMap((p) => p.errors.map((err) => ({ ...err, source: p.name })));
+    }, [policies]);
 
     const toggleAll = () => {
-        if (!context) return;
         if (expandedIds.size > 0) {
             setExpandedIds(new Set());
         } else {
-            setExpandedIds(new Set(context.policies.map((p) => p.id)));
+            setExpandedIds(new Set(policies.map((p) => p.id)));
         }
     };
 
@@ -103,8 +98,6 @@ export const PoliciesPanel: React.FC = () => {
         setIsSearchVisible(!isSearchVisible);
         if (isSearchVisible) setSearchQuery("");
     };
-
-    if (!context) return null;
 
     return (
         <div className="h-full flex flex-col bg-background border-border overflow-hidden s">
@@ -122,8 +115,8 @@ export const PoliciesPanel: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={saveActiveContext}
-                            title="Save changes in this context"
+                            onClick={saveActiveWorkspace}
+                            title="Save changes in this workspace"
                             className="h-7 w-7"
                         >
                             <Save size={14} />
@@ -150,7 +143,7 @@ export const PoliciesPanel: React.FC = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => addPolicy(context.id)}
+                        onClick={() => addPolicy()}
                         className="h-7 w-7"
                     >
                         <Plus size={16} />
@@ -194,7 +187,6 @@ export const PoliciesPanel: React.FC = () => {
                     <PolicyItem
                         key={policy.id}
                         policy={policy}
-                        contextId={context.id}
                         isExpanded={expandedIds.has(policy.id)}
                         onToggle={() => toggleOne(policy.id)}
                         updatePolicy={updatePolicy}

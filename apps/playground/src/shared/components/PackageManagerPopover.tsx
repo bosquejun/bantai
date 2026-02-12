@@ -1,18 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
-import { useBantaiStore } from "@/shared/store/store";
+import { usePackagesStore } from "@/shared/store";
 import { CheckCircle2, Download, Loader2, Package, XCircle } from "lucide-react";
 import React from "react";
 
 export const PackageManagerPopover: React.FC = () => {
-    const {
-        packages,
-        hasActivePackages,
-        getDownloadingPackages,
-        getInstallingPackages,
-        getInstalledPackages,
-    } = useBantaiStore();
+    const packages = usePackagesStore((state) => state.packages);
+    const hasActivePackages = usePackagesStore((state) => state.hasActivePackages);
+    const getDownloadingPackages = usePackagesStore((state) => state.getDownloadingPackages);
+    const getInstallingPackages = usePackagesStore((state) => state.getInstallingPackages);
+    const getInstalledPackages = usePackagesStore((state) => state.getInstalledPackages);
 
     const downloading = getDownloadingPackages();
     const installing = getInstallingPackages();

@@ -4,7 +4,7 @@ import { useDebounceCallback } from "@/hooks/use-debounce-callback";
 import { transpileCode } from "@/lib/monaco";
 import { CollapsibleEditorCard } from "@/shared/components/CollapsibleEditorCard";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
-import { useBantaiStore, useCurrentWorkspace } from "@/shared/store/store";
+import { useCurrentWorkspace, useActiveRules, useRulesStore, useWorkspaceStore } from "@/shared/store";
 import type { Rule } from "@/shared/types";
 import type { OnMount } from "@monaco-editor/react";
 import { FileCode, ListCollapse, ListTree, Plus, Save, Search, X } from "lucide-react";
@@ -13,16 +13,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface RuleItemProps {
     rule: Rule;
-    contextId: string;
     isExpanded: boolean;
     onToggle: () => void;
-    updateRule: (contextId: string, ruleId: string, updates: Partial<Rule>) => void;
-    deleteRule: (contextId: string, ruleId: string) => void;
+    updateRule: (ruleId: string, updates: Partial<Rule>) => void;
+    deleteRule: (ruleId: string) => void;
 }
 
 const RuleItem: React.FC<RuleItemProps> = ({
     rule,
-    contextId,
     isExpanded,
     onToggle,
     updateRule,
@@ -48,16 +46,14 @@ const RuleItem: React.FC<RuleItemProps> = ({
                 fileModel.current.setValue(wrappedCode);
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            contextId &&
-                updateRule(contextId, rule.id, {
-                    code: code || "",
-                });
+            updateRule(rule.id, {
+                code: code || "",
+            });
 
             const { errors, transpiledCodes } = await transpileCode(monaco, editorRef.current);
 
-            if (errors.length && contextId) {
-                updateRule(contextId, rule.id, {
+            if (errors.length) {
+                updateRule(rule.id, {
                     errors: errors.map((err) => ({
                         message: err.message,
                         line: err.line,
@@ -75,8 +71,8 @@ const RuleItem: React.FC<RuleItemProps> = ({
     const handleSave = useCallback(async () => {
         if (!monaco || !editorRef.current) return;
         const { errors } = await transpileCode(monaco, editorRef.current);
-        if (errors.length && contextId) {
-            updateRule(contextId, rule.id, {
+        if (errors.length) {
+            updateRule(rule.id, {
                 errors: errors.map((err) => ({
                     message: err.message,
                     line: err.line,
@@ -93,7 +89,7 @@ const RuleItem: React.FC<RuleItemProps> = ({
                 null
             );
         }
-    }, [monaco, editorRef, contextId, updateRule, onToggle]);
+    }, [monaco, editorRef, updateRule, rule.id]);
 
     const handleEditorDidMount: OnMount = (editor) => {
         // Save the editor instance to the ref
@@ -132,11 +128,11 @@ const RuleItem: React.FC<RuleItemProps> = ({
             onToggle={onToggle}
             hasErrors={hasErrors}
             isDirty={rule.isDirty}
-            onTitleChange={(name) => updateRule(contextId, rule.id, { name })}
-            onDelete={() => deleteRule(contextId, rule.id)}
+            onTitleChange={(name) => updateRule(rule.id, { name })}
+            onDelete={() => deleteRule(rule.id)}
             editorProps={{
                 value: rule.code,
-                onChange: (val) => updateRule(contextId, rule.id, { code: val || "" }),
+                onChange: (val) => updateRule(rule.id, { code: val || "" }),
                 path: `${previewWorkspace}/${rule.id}.ts`,
                 onMount: handleEditorDidMount,
             }}
@@ -145,45 +141,42 @@ const RuleItem: React.FC<RuleItemProps> = ({
 };
 
 export const RulesPanel: React.FC = () => {
-    const { contexts, activeContextId, addRule, updateRule, deleteRule, saveActiveContext } =
-        useBantaiStore();
-    const context = contexts.find((c) => c.id === activeContextId);
+    const rules = useActiveRules();
+    const { addRule, updateRule, deleteRule } = useRulesStore();
+    const saveActiveWorkspace = useWorkspaceStore((state) => state.saveActiveWorkspace);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchVisible, setIsSearchVisible] = useState(false);
 
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-    const prevRuleCount = React.useRef(context?.rules.length || 0);
+    const prevRuleCount = React.useRef(rules.length || 0);
     useEffect(() => {
-        if (context && context.rules.length > prevRuleCount.current) {
-            const latestRule = context.rules[0];
+        if (rules.length > prevRuleCount.current) {
+            const latestRule = rules[0];
             setExpandedIds((prev) => new Set(prev).add(latestRule.id));
         }
-        prevRuleCount.current = context?.rules.length || 0;
-    }, [context?.rules.length]);
+        prevRuleCount.current = rules.length || 0;
+    }, [rules.length]);
 
     const filteredRules = useMemo(() => {
-        if (!context) return [];
-        return context.rules.filter((r) =>
+        return rules.filter((r) =>
             r.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    }, [context, searchQuery]);
+    }, [rules, searchQuery]);
 
     const anyDirty = useMemo(() => {
-        return context?.rules.some((r) => r.isDirty);
-    }, [context]);
+        return rules.some((r) => r.isDirty);
+    }, [rules]);
 
     const aggregateErrors = useMemo(() => {
-        if (!context) return [];
-        return context.rules.flatMap((r) => r.errors.map((err) => ({ ...err, source: r.name })));
-    }, [context]);
+        return rules.flatMap((r) => r.errors.map((err) => ({ ...err, source: r.name })));
+    }, [rules]);
 
     const toggleAll = () => {
-        if (!context) return;
         if (expandedIds.size > 0) {
             setExpandedIds(new Set());
         } else {
-            setExpandedIds(new Set(context.rules.map((r) => r.id)));
+            setExpandedIds(new Set(rules.map((r) => r.id)));
         }
     };
 
@@ -198,8 +191,6 @@ export const RulesPanel: React.FC = () => {
         setIsSearchVisible(!isSearchVisible);
         if (isSearchVisible) setSearchQuery("");
     };
-
-    if (!context) return null;
 
     return (
         <div className="h-full flex flex-col bg-background border-x border-border overflow-hidden s">
@@ -217,8 +208,8 @@ export const RulesPanel: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={saveActiveContext}
-                            title="Save changes in this context"
+                            onClick={saveActiveWorkspace}
+                            title="Save changes in this workspace"
                             className="h-7 w-7"
                         >
                             <Save size={14} />
@@ -245,7 +236,7 @@ export const RulesPanel: React.FC = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => addRule(context.id)}
+                        onClick={() => addRule()}
                         className="h-7 w-7"
                     >
                         <Plus size={16} />
@@ -289,7 +280,6 @@ export const RulesPanel: React.FC = () => {
                     <RuleItem
                         key={rule.id}
                         rule={rule}
-                        contextId={context.id}
                         isExpanded={expandedIds.has(rule.id)}
                         onToggle={() => toggleOne(rule.id)}
                         updateRule={updateRule}

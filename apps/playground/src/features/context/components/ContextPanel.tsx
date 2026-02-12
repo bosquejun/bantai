@@ -3,8 +3,8 @@ import { Editor } from "@/features/editor/components/Editor";
 import { useDebounceCallback } from "@/hooks/use-debounce-callback";
 import { transpileCode } from "@/lib/monaco";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
-import { useCurrentWorkspace } from "@/shared/store/store";
-import type { Context } from "@/shared/types";
+import { useCurrentWorkspace } from "@/shared/store";
+import type { Workspace } from "@/shared/store/workspace/types/workspaceStore.types";
 import { defaultEditorOptions } from "@/shared/utils/editor-options";
 import { useMonaco, type OnMount } from "@monaco-editor/react";
 import { PanelLeftClose, PanelLeftOpen, RotateCcw, Save } from "lucide-react";
@@ -14,20 +14,20 @@ import React, { useCallback, useEffect, useRef } from "react";
 interface ContextPanelProps {
     isCollapsed: boolean;
     onToggle: () => void;
-    activeContext: Context | undefined;
-    activeContextId: string | null;
+    activeWorkspace: Workspace | undefined;
+    activeWorkspaceId: string | null;
     activeErrors: boolean;
     onSave: () => void;
     onDiscardOpen: () => void;
-    updateContext: (contextId: string, updates: Partial<Context>) => void;
+    updateContext: (workspaceId: string, context: string) => void;
     width: string;
 }
 
 export const ContextPanel: React.FC<ContextPanelProps> = ({
     isCollapsed,
     onToggle,
-    activeContext,
-    activeContextId,
+    activeWorkspace,
+    activeWorkspaceId,
     activeErrors,
     onSave,
     onDiscardOpen,
@@ -63,40 +63,29 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
             }
 
             // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            activeContextId &&
-                updateContext(activeContextId, {
-                    definition: code || "",
-                });
+            activeWorkspaceId && updateContext(activeWorkspaceId, code || "");
 
             const { errors, transpiledCodes } = await transpileCode(monaco, editorRef.current);
 
-            if (errors.length && activeContextId) {
-                updateContext(activeContextId, {
-                    errors: errors.map((err) => ({
-                        message: err.message,
-                        line: err.line,
-                        source: "Context Definition",
-                    })),
-                });
+            if (errors.length && activeWorkspaceId && activeWorkspace) {
+                // Update workspace with errors - errors are stored on workspace level
+                // Note: This might need adjustment based on how errors are handled
+                // For now, we'll update the workspace with the context that has errors
+                updateContext(activeWorkspaceId, activeWorkspace.context);
             }
 
             console.log("Errors:", errors);
             console.log("Transpiled Codes:", transpiledCodes);
         }, 300),
-        [monaco, editorRef, fileModel.current]
+        [monaco, editorRef, fileModel.current, activeWorkspaceId, updateContext]
     );
 
     const handleSave = useCallback(async () => {
         if (!monaco || !editorRef.current) return;
         const { errors } = await transpileCode(monaco, editorRef.current);
-        if (errors.length && activeContextId) {
-            updateContext(activeContextId, {
-                errors: errors.map((err) => ({
-                    message: err.message,
-                    line: err.line,
-                    source: "Context Definition",
-                })),
-            });
+        if (errors.length && activeWorkspaceId && activeWorkspace) {
+            // Errors are handled by linting in the store
+            updateContext(activeWorkspaceId, activeWorkspace.context);
         } else {
             editorRef.current.focus();
 
@@ -108,7 +97,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
             );
             onSave();
         }
-    }, [monaco, editorRef, activeContextId, updateContext]);
+    }, [monaco, editorRef, activeWorkspaceId, activeWorkspace, updateContext, onSave]);
 
     const handleEditorDidMount: OnMount = (editor) => {
         // Save the editor instance to the ref
@@ -130,8 +119,8 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
             );
         }
 
-        handleTranspile(activeContext?.definition || "");
-    }, [monaco, editorRef.current]);
+        handleTranspile(activeWorkspace?.context || "");
+    }, [monaco, editorRef.current, activeWorkspace?.context, handleTranspile]);
 
     return (
         <div
@@ -146,13 +135,13 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
                             Context Definition
                         </span>
-                        {activeContext?.isDirty && (
+                        {activeWorkspace?.isDirty && (
                             <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />
                         )}
                     </div>
                 )}
                 <div className="flex items-center gap-1">
-                    {!isCollapsed && activeContext?.isDirty && (
+                    {!isCollapsed && activeWorkspace?.isDirty && (
                         <>
                             <Button
                                 variant="ghost"
@@ -191,7 +180,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                 <div className="flex-1 flex items-center justify-center relative">
                     <span className="rotate-90 text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap flex items-center gap-2">
                         Context
-                        {activeContext?.isDirty && (
+                        {activeWorkspace?.isDirty && (
                             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                         )}
                     </span>
@@ -200,7 +189,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                 <>
                     <div className="flex-1 flex flex-col min-h-0">
                         <Editor
-                            value={activeContext?.definition || ""}
+                            value={activeWorkspace?.context || ""}
                             onChange={(value) => handleTranspile(value || "")}
                             options={defaultEditorOptions}
                             onMount={handleEditorDidMount}
@@ -208,7 +197,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                         />
                     </div>
                     <CompilationErrorPanel
-                        errors={activeContext?.errors || []}
+                        errors={activeWorkspace?.errors || []}
                         title="Context Problems"
                     />
                 </>

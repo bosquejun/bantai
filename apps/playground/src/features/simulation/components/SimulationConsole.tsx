@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Editor } from "@/features/editor/components/Editor";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
-import { useBantaiStore } from "@/shared/store/store";
+import { useSimulationStore } from "@/shared/store";
 import type { TraceStep } from "@/shared/types";
 import {
     AlertCircle,
@@ -67,13 +67,11 @@ const TraceItem: React.FC<{ step: TraceStep; index: number }> = ({ step, index }
 };
 
 export const SimulationConsole: React.FC = () => {
-    const {
-        simulationInput,
-        setSimulationInput,
-        simulationInputErrors,
-        isSimulationRunning,
-        simulationResult,
-    } = useBantaiStore();
+    const simulationInput = useSimulationStore((state) => state.simulationInput);
+    const setSimulationInput = useSimulationStore((state) => state.setSimulationInput);
+    const simulationInputErrors = useSimulationStore((state) => state.simulationInputErrors);
+    const isSimulationRunning = useSimulationStore((state) => state.isSimulationRunning);
+    const simulationResult = useSimulationStore((state) => state.simulationResult);
     const [isOpen, setIsOpen] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
 

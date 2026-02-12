@@ -1,4 +1,4 @@
-import { useBantaiStore } from "@/shared/store/store";
+import { useGlobalStore } from "@/shared/store";
 import { Editor as Monaco, type EditorProps } from "@monaco-editor/react";
 import React from "react";
 
@@ -10,7 +10,7 @@ type BantaiEditorProps = EditorProps & {
 };
 
 export const Editor: React.FC<BantaiEditorProps> = (props) => {
-    const theme = useBantaiStore((state) => state.theme);
+    const theme = useGlobalStore((state) => state.theme);
 
     // Destructure properties to handle defaults and separate custom props from Monaco props
     const {
