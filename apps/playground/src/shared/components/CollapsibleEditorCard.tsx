@@ -4,7 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Input } from "@/components/ui/input";
 import { Editor } from "@/features/editor/components/Editor";
 import type { EditorProps } from "@monaco-editor/react";
-import { AlertCircle, ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, Save, Trash2 } from "lucide-react";
 import React from "react";
 import { defaultEditorOptions } from "../utils/editor-options";
 
@@ -17,6 +17,7 @@ type CollapsibleEditorCardProps = {
     onTitleChange?: (title: string) => void;
     onToggle?: () => void;
     onDelete?: () => void;
+    onSave?: () => void;
     editorProps?: EditorProps;
 };
 
@@ -29,6 +30,7 @@ export const CollapsibleEditorCard: React.FC<CollapsibleEditorCardProps> = ({
     isDirty,
     onTitleChange,
     onDelete,
+    onSave,
     editorProps,
 }) => {
     return (
@@ -79,6 +81,18 @@ export const CollapsibleEditorCard: React.FC<CollapsibleEditorCardProps> = ({
                             className="flex items-center gap-1 ml-2 shrink-0"
                             onClick={(e) => e.stopPropagation()}
                         >
+                            {isDirty && onSave && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary"
+                                    onClick={() => onSave()}
+                                    disabled={hasErrors}
+                                    title={hasErrors ? "Fix errors to save" : "Save"}
+                                >
+                                    <Save size={14} />
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"

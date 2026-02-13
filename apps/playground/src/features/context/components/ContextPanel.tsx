@@ -3,13 +3,16 @@ import { Editor } from "@/features/editor/components/Editor";
 import { useDebounceCallback } from "@/hooks/use-debounce-callback";
 import { transpileCode } from "@/lib/monaco";
 import { CompilationErrorPanel } from "@/shared/components/CompilationErrorPanel";
-import { useCurrentWorkspace } from "@/shared/store";
+import { useCurrentWorkspace, useWorkspaceStore } from "@/shared/store";
+import { lintCode } from "@/shared/store/utils/linting";
 import type { Workspace } from "@/shared/store/workspace/types/workspaceStore.types";
 import { defaultEditorOptions } from "@/shared/utils/editor-options";
 import { useMonaco, type OnMount } from "@monaco-editor/react";
-import { PanelLeftClose, PanelLeftOpen, RotateCcw, Save } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Save } from "lucide-react";
 import * as monaco from "monaco-editor";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { getCompleteContext } from "../codes/complete-context";
+import { getGlobalContextDeclaration } from "../codes/global-declarations";
 
 interface ContextPanelProps {
     isCollapsed: boolean;
@@ -30,97 +33,275 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
     activeWorkspaceId,
     activeErrors,
     onSave,
-    onDiscardOpen,
     updateContext,
     width,
 }) => {
     const monaco = useMonaco();
     const editorRef = useRef<monaco.editor.ICodeEditor | null>(null);
-    const workspace = useCurrentWorkspace();
+    const workspacePath = useCurrentWorkspace();
     const fileModel = useRef<monaco.editor.ITextModel | null>(null);
+    const setWorkspaceErrors = useWorkspaceStore((state) => state.setWorkspaceErrors);
+    const snapshots = useWorkspaceStore((state) => state.snapshots);
+    const isUserTypingRef = useRef(false);
+
+    // Check if context specifically is dirty (not just workspace)
+    const isContextDirty = useMemo(() => {
+        if (!activeWorkspace || !activeWorkspaceId) return false;
+        const snapshot = snapshots[activeWorkspaceId];
+        if (!snapshot) return false;
+        return activeWorkspace.context !== snapshot.context;
+    }, [activeWorkspace, activeWorkspaceId, snapshots]);
+
+    // Shared helper: Update file model and add type declarations
+    const updateFileModelAndTypes = useCallback(
+        (code: string) => {
+            if (!monaco || !fileModel.current || !code) return;
+
+            const wrappedCode = getCompleteContext(code);
+            fileModel.current.setValue(wrappedCode);
+
+            const globalContextDts = `${workspacePath}/context-global.d.ts`;
+            const declaration = getGlobalContextDeclaration(workspacePath);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (monaco as any).languages.typescript.typescriptDefaults.addExtraLib(
+                declaration,
+                globalContextDts
+            );
+        },
+        [monaco, workspacePath]
+    );
+
+    // Shared helper: Collect and set errors (static lint + TypeScript)
+    const collectAndSetErrors = useCallback(
+        async (code: string, tsErrors: Array<{ line: number; message: string }>) => {
+            if (!activeWorkspaceId) return;
+
+            const staticErrors = lintCode(code || "");
+            const mappedTsErrors = tsErrors.map((err) => ({
+                line: err.line,
+                message: err.message,
+                source: "Context (TypeScript)",
+            }));
+
+            setWorkspaceErrors(activeWorkspaceId, [...staticErrors, ...mappedTsErrors]);
+        },
+        [activeWorkspaceId, setWorkspaceErrors]
+    );
 
     const handleTranspile = useCallback(
         // eslint-disable-next-line react-hooks/use-memo
         useDebounceCallback(async (code: string) => {
             if (!monaco || !editorRef.current) return;
-            if (fileModel.current && code) {
-                // 3. Wrap the user's input and update the background model
-                const wrappedCode = `export const appContext = ${code};\nexport default appContext;`;
-                fileModel.current.setValue(wrappedCode);
 
-                const globalContextDts = `${workspace}/context-global.d.ts`;
-                const declaration = `
-    import { appContext as TContext } from "${workspace}/context";
+            const codeValue = code || "";
 
-    declare global {
-        const appContext: typeof TContext;
-    }
-    export {};`;
-                (monaco as any).languages.typescript.typescriptDefaults.addExtraLib(
-                    declaration,
-                    globalContextDts
-                );
+            // Update context in store
+            if (activeWorkspaceId) {
+                updateContext(activeWorkspaceId, codeValue);
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-            activeWorkspaceId && updateContext(activeWorkspaceId, code || "");
+            // Transpile and collect errors
+            const { errors } = await transpileCode(monaco, editorRef.current);
 
-            const { errors, transpiledCodes } = await transpileCode(monaco, editorRef.current);
+            // Update errors
+            await collectAndSetErrors(codeValue, errors);
 
-            if (errors.length && activeWorkspaceId && activeWorkspace) {
-                // Update workspace with errors - errors are stored on workspace level
-                // Note: This might need adjustment based on how errors are handled
-                // For now, we'll update the workspace with the context that has errors
-                updateContext(activeWorkspaceId, activeWorkspace.context);
-            }
-
-            console.log("Errors:", errors);
-            console.log("Transpiled Codes:", transpiledCodes);
-        }, 300),
-        [monaco, editorRef, fileModel.current, activeWorkspaceId, updateContext]
+            // Update file model and type declarations
+            updateFileModelAndTypes(codeValue);
+        }, 750),
+        [
+            monaco,
+            editorRef,
+            activeWorkspaceId,
+            updateContext,
+            collectAndSetErrors,
+            updateFileModelAndTypes,
+        ]
     );
 
-    const handleSave = useCallback(async () => {
-        if (!monaco || !editorRef.current) return;
-        const { errors } = await transpileCode(monaco, editorRef.current);
-        if (errors.length && activeWorkspaceId && activeWorkspace) {
-            // Errors are handled by linting in the store
-            updateContext(activeWorkspaceId, activeWorkspace.context);
-        } else {
-            editorRef.current.focus();
+    // Ensure the background file model exists for the context so that
+    // transpile + type declarations have a concrete model to work with.
+    const ensureFileModel = useCallback(() => {
+        if (!monaco) return false;
 
-            // Trigger the 'Format Document' action
-            editorRef.current.trigger(
-                "context-format-on-save",
-                "editor.action.formatDocument",
-                null
-            );
-            onSave();
+        if (!fileModel.current) {
+            const path = monaco.Uri.parse(`${workspacePath}/context.ts`);
+            const existingModel = monaco.editor.getModel(path);
+
+            if (existingModel) {
+                fileModel.current = existingModel;
+            } else {
+                fileModel.current = monaco.editor.createModel("", "typescript", path);
+            }
         }
-    }, [monaco, editorRef, activeWorkspaceId, activeWorkspace, updateContext, onSave]);
+
+        return fileModel.current !== null;
+    }, [monaco, workspacePath]);
+
+    // Update editor value when workspace context changes programmatically (e.g., after discard)
+    useEffect(() => {
+        if (!editorRef.current || !activeWorkspace) return;
+
+        // Skip if user is currently typing to avoid conflicts
+        if (isUserTypingRef.current) return;
+
+        const model = editorRef.current.getModel();
+        if (!model) return;
+
+        const currentValue = model.getValue();
+        const workspaceValue = activeWorkspace.context || "";
+
+        // Only update if the values differ to avoid unnecessary updates
+        if (currentValue !== workspaceValue) {
+            // Use requestAnimationFrame to ensure React has updated the workspace state
+            requestAnimationFrame(() => {
+                if (!editorRef.current) return;
+
+                const modelAfterUpdate = editorRef.current.getModel();
+                if (!modelAfterUpdate) return;
+
+                // Set the value and move cursor to end
+                modelAfterUpdate.setValue(workspaceValue);
+                const lineCount = modelAfterUpdate.getLineCount();
+                editorRef.current.setPosition({
+                    lineNumber: lineCount,
+                    column: modelAfterUpdate.getLineMaxColumn(lineCount),
+                });
+
+                // Trigger transpile to update errors (debounced, so safe to call)
+                handleTranspile(workspaceValue);
+            });
+        }
+    }, [activeWorkspace, handleTranspile]);
+
+    const handleSave = useCallback(async () => {
+        if (!monaco || !editorRef.current || !activeWorkspaceId) return;
+
+        const model = editorRef.current.getModel();
+        const currentCode = model?.getValue() ?? "";
+
+        // Transpile and collect errors
+        const { errors } = await transpileCode(monaco, editorRef.current);
+
+        // Check for errors before updating (to avoid unnecessary state updates)
+        const staticErrors = lintCode(currentCode);
+        const hasErrors = staticErrors.length > 0 || errors.length > 0;
+
+        // Update errors using shared helper (always update to show current state)
+        await collectAndSetErrors(currentCode, errors);
+
+        if (hasErrors) {
+            // Don't revert the user's code – just prevent saving when there are errors
+            return;
+        }
+
+        // Update file model and types before formatting
+        updateFileModelAndTypes(currentCode);
+
+        editorRef.current.focus();
+
+        // Trigger the 'Format Document' action
+        editorRef.current.trigger("context-format-on-save", "editor.action.formatDocument", null);
+
+        // Wait for formatting edits to be applied, then update context with formatted value
+        // Format edits are applied synchronously, but we use requestAnimationFrame
+        // to ensure the model has been fully updated before reading the value
+        requestAnimationFrame(() => {
+            const modelAfterFormat = editorRef.current?.getModel();
+            if (modelAfterFormat && activeWorkspaceId) {
+                const formattedValue = modelAfterFormat.getValue();
+                // Update the context with the formatted code/definition
+                updateContext(activeWorkspaceId, formattedValue);
+                // Then save the snapshot
+                onSave();
+            }
+        });
+    }, [
+        monaco,
+        editorRef,
+        activeWorkspaceId,
+        updateContext,
+        onSave,
+        collectAndSetErrors,
+        updateFileModelAndTypes,
+    ]);
+
+    // Store the latest handleSave callback in a ref so the command always calls the current version
+    const handleSaveRef = useRef(handleSave);
+
+    // Update the ref whenever handleSave changes
+    useEffect(() => {
+        if (handleSaveRef.current !== null) return;
+        handleSaveRef.current = handleSave;
+    }, [handleSave]);
+
+    // Initialize file model (no transpile here)
+    useEffect(() => {
+        if (!monaco) return;
+        ensureFileModel();
+        // We intentionally do NOT trigger transpile here because the editor
+        // instance may not yet have the correct model/value wiring when this
+        // effect first runs. Instead, we trigger the initial transpile from
+        // the editor's onMount handler once the editor is fully ready.
+    }, [monaco, ensureFileModel]);
 
     const handleEditorDidMount: OnMount = (editor) => {
-        // Save the editor instance to the ref
+        if (!monaco) return;
         editorRef.current = editor;
 
-        if (monaco) {
-            editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, handleSave);
+        // Use a STATIC string name.
+        // This looks counter-intuitive, but Monaco scoped-evaluates this
+        // against the instance that currently has keyboard focus.
+        const focusKey = editor.createContextKey<boolean>("isThisSpecificEditorFocused", false);
+
+        editor.onDidFocusEditorWidget(() => focusKey.set(true));
+        editor.onDidBlurEditorWidget(() => focusKey.set(false));
+
+        editor.addAction({
+            // Use a static ID so they share the same "command" logic
+            // but scoped to the focused instance
+            id: "save-document-action",
+            label: "Save",
+            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+
+            // When you press Cmd+S, Monaco checks the focused editor's
+            // context for 'isThisSpecificEditorFocused'
+            precondition: "isThisSpecificEditorFocused",
+
+            run: () => {
+                handleSaveRef.current();
+            },
+        });
+
+        // Once the editor is fully mounted, if there is existing context content
+        // for the active workspace, trigger an initial transpile so that
+        // CompilationErrorPanel reflects any pre-existing issues on load.
+        // We also ensure the background file model exists before transpiling.
+        const initialContext = activeWorkspace?.context || "";
+        if (initialContext && ensureFileModel()) {
+            handleTranspile(initialContext);
         }
     };
 
-    useEffect(() => {
-        if (!monaco || !editorRef.current) return;
-        const path = monaco?.Uri?.parse(`${workspace}/context.ts`);
-        if (!monaco.editor.getModel(path)) {
-            fileModel.current = monaco.editor.createModel(
-                "", // Start empty
-                "typescript",
-                path
-            );
-        }
+    // useEffect(() => {
+    //     if (!monaco || !editorRef.current) return;
+    //     const listener = (editorRef.current as any).addAction({
+    //         id: `save-context-${activeWorkspaceId}`,
+    //         label: "Save",
+    //         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+    //         run: () => {
+    //             handleSave();
+    //             // Monaco's addAction automatically calls preventDefault()
+    //             // to stop the browser's save dialog.
+    //         },
+    //     });
 
-        handleTranspile(activeWorkspace?.context || "");
-    }, [monaco, editorRef.current, activeWorkspace?.context, handleTranspile]);
+    //     return () => {
+    //         if (listener) {
+    //             listener.dispose();
+    //         }
+    //     };
+    // }, [editorRef.current, workspacePath]);
 
     return (
         <div
@@ -135,15 +316,15 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                         <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground truncate">
                             Context Definition
                         </span>
-                        {activeWorkspace?.isDirty && (
+                        {isContextDirty && (
                             <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />
                         )}
                     </div>
                 )}
                 <div className="flex items-center gap-1">
-                    {!isCollapsed && activeWorkspace?.isDirty && (
+                    {!isCollapsed && isContextDirty && (
                         <>
-                            <Button
+                            {/* <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={onDiscardOpen}
@@ -151,11 +332,13 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                                 title="Discard local changes"
                             >
                                 <RotateCcw size={14} />
-                            </Button>
+                            </Button> */}
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={handleSave}
+                                onClick={() => {
+                                    handleSaveRef.current();
+                                }}
                                 disabled={activeErrors}
                                 className="h-7 w-7"
                                 title={activeErrors ? "Fix errors to save" : "Save context"}
@@ -180,7 +363,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                 <div className="flex-1 flex items-center justify-center relative">
                     <span className="rotate-90 text-[10px] font-bold uppercase tracking-widest text-muted-foreground whitespace-nowrap flex items-center gap-2">
                         Context
-                        {activeWorkspace?.isDirty && (
+                        {isContextDirty && (
                             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                         )}
                     </span>
@@ -190,10 +373,17 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                     <div className="flex-1 flex flex-col min-h-0">
                         <Editor
                             value={activeWorkspace?.context || ""}
-                            onChange={(value) => handleTranspile(value || "")}
+                            onChange={(value) => {
+                                isUserTypingRef.current = true;
+                                handleTranspile(value || "");
+                                // Reset flag after a short delay
+                                setTimeout(() => {
+                                    isUserTypingRef.current = false;
+                                }, 50);
+                            }}
                             options={defaultEditorOptions}
                             onMount={handleEditorDidMount}
-                            path={`${workspace}/preview/context.ts`}
+                            path={`${workspacePath}/preview/context.ts`}
                         />
                     </div>
                     <CompilationErrorPanel

@@ -89,18 +89,30 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
             updateContext: (id, context) =>
                 set((state) => ({
-                    workspaces: state.workspaces.map((w) => {
-                        if (w.id === id) {
-                            return {
-                                ...w,
-                                context,
-                                errors: lintCode(context),
-                                lastModified: Date.now(),
-                                isDirty: true,
-                            };
-                        }
-                        return w;
-                    }),
+                    workspaces: state.workspaces.map((w) =>
+                        w.id === id
+                            ? {
+                                  ...w,
+                                  context,
+                                  // Errors for workspace context are managed explicitly
+                                  // by the editor layer (ContextPanel) to avoid flicker
+                                  lastModified: Date.now(),
+                                  isDirty: true,
+                              }
+                            : w
+                    ),
+                })),
+
+            setWorkspaceErrors: (id, errors) =>
+                set((state) => ({
+                    workspaces: state.workspaces.map((w) =>
+                        w.id === id
+                            ? {
+                                  ...w,
+                                  errors,
+                              }
+                            : w
+                    ),
                 })),
 
             deleteWorkspace: (id) =>

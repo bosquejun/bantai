@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { loader, type Monaco } from "@monaco-editor/react";
 import { js_beautify } from "js-beautify";
 import * as monaco from "monaco-editor";
-import ts from "typescript";
 
 export async function initMonaco() {
     const monaco = await loader.init();
@@ -32,7 +32,7 @@ export async function initMonaco() {
             const formatted = js_beautify(model.getValue(), {
                 indent_size: 2,
                 // 1. 'expand' puts braces on their own lines
-                brace_style: "expand",
+                brace_style: "collapse",
                 // 2. Forces wrapping when the line gets long (like your Zod schema)
                 wrap_line_length: 40,
                 // 3. Breaks chained methods (like .string().optional()) onto new lines
@@ -60,18 +60,20 @@ export function setMonacoDeclarationTypes({
     dtsFiles: Array<{ path: string; text: string }>;
     packageName: string;
 }) {
-    for (let { path, text } of dtsFiles) {
+    for (const file of dtsFiles) {
+        const { path, text } = file;
+        let formattedText = text;
         const uri = `file:///node_modules/${packageName.replace("/", "-").replace("@", "")}/${path}`;
 
         if (packageName.startsWith("@")) {
-            text = `
+            formattedText = `
             declare module "${packageName}" {
-                ${text}
+                ${formattedText}
             }
             `;
         }
 
-        monaco.languages.typescript.typescriptDefaults.addExtraLib(text, uri);
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(formattedText, uri);
     }
 }
 
@@ -169,18 +171,11 @@ export async function transpileCode(
     };
 }
 
-export async function transpileCodeString(
-    monaco: Monaco,
-    code: string
-): Promise<string | undefined> {
-    const transpiledCode = ts.transpile(code);
-
-    return undefined;
-}
-
 export function getEditorErrors(monaco: Monaco, editor: monaco.editor.ICodeEditor) {
     const editorModel = editor.getModel();
     if (!editorModel) return [];
     const markers = monaco.editor.getModelMarkers({ resource: editorModel.uri });
-    return markers.filter((marker: any) => marker.severity === monaco.MarkerSeverity.Error);
+    return markers.filter(
+        (marker: monaco.editor.IMarker) => marker.severity === monaco.MarkerSeverity.Error
+    );
 }

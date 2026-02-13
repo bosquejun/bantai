@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useGlobalStore } from "@/shared/store";
 import { Editor as Monaco, type EditorProps } from "@monaco-editor/react";
 import React from "react";
@@ -38,6 +39,11 @@ export const Editor: React.FC<BantaiEditorProps> = (props) => {
                     value={value}
                     onChange={onChange}
                     height={height}
+                    loading={
+                        <div className="flex h-full w-full items-center justify-center bg-background">
+                            <Spinner className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                    }
                     options={{
                         minimap: { enabled: false },
                         fontSize: 13,

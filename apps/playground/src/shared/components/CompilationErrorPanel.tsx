@@ -1,5 +1,12 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
 import type { BantaiError } from "@/shared/types";
 import { AlertCircle, ChevronDown, ChevronUp, Info } from "lucide-react";
 import React, { useState } from "react";
@@ -14,7 +21,47 @@ export const CompilationErrorPanel: React.FC<CompilationErrorPanelProps> = ({
     title = "Problems",
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [selectedError, setSelectedError] = useState<BantaiError | null>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
     const errorCount = errors.length;
+
+    // Roughly limit preview to ~3 lines worth of text
+    const MAX_PREVIEW_CHARS = 120;
+
+    const getPreviewMessage = (
+        message: string
+    ): {
+        preview: string;
+        isTruncated: boolean;
+    } => {
+        // Prefer splitting on newlines if present
+        const lines = message.split("\n");
+        if (lines.length > 3) {
+            return {
+                preview: lines.slice(0, 3).join("\n"),
+                isTruncated: true,
+            };
+        }
+
+        if (message.length <= MAX_PREVIEW_CHARS) {
+            return { preview: message, isTruncated: false };
+        }
+
+        // Truncate by characters and try to cut on a word boundary
+        const slice = message.slice(0, MAX_PREVIEW_CHARS);
+        const lastSpace = slice.lastIndexOf(" ");
+        const safeSlice = lastSpace > 40 ? slice.slice(0, lastSpace) : slice;
+
+        return {
+            preview: `${safeSlice}…`,
+            isTruncated: true,
+        };
+    };
+
+    const handleViewMore = (error: BantaiError) => {
+        setSelectedError(error);
+        setIsSheetOpen(true);
+    };
 
     if (errorCount === 0) {
         return (
@@ -45,34 +92,79 @@ export const CompilationErrorPanel: React.FC<CompilationErrorPanelProps> = ({
                 )}
             </CollapsibleTrigger>
 
-            <CollapsibleContent>
-                <ScrollArea className="max-h-40 h-auto">
+            <CollapsibleContent className="overflow-hidden">
+                <ScrollArea className="h-[160px]">
                     <div className="p-2 space-y-0.5">
-                        {errors.map((error, i) => (
-                            <div
-                                key={i}
-                                className="flex gap-2 px-2 py-1.5 rounded hover:bg-destructive/5 s group items-start"
-                            >
-                                <div className="flex flex-col items-end w-9 shrink-0 border-r border-destructive/20 pr-2 pt-0.5">
-                                    <span className="text-[10px] font-mono text-muted-foreground leading-none">
-                                        {error.line ? `L${error.line}` : "--"}
-                                    </span>
-                                </div>
-                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                    {error.source && (
-                                        <span className="text-[9px] font-bold text-destructive/70 uppercase tracking-wider leading-none">
-                                            {error.source}
+                        {errors.map((error, i) => {
+                            const { preview, isTruncated } = getPreviewMessage(error.message);
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex gap-2 px-2 py-1.5 rounded hover:bg-destructive/5 s group items-start"
+                                >
+                                    <div className="flex flex-col items-end w-9 shrink-0 border-r border-destructive/20 pr-2 pt-0.5">
+                                        <span className="text-[10px] font-mono text-muted-foreground leading-none">
+                                            {error.line ? `L${error.line}` : "--"}
                                         </span>
-                                    )}
-                                    <span className="text-[11px] text-destructive font-mono leading-relaxed break-words">
-                                        {error.message}
-                                    </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                        {error.source && (
+                                            <span className="text-[9px] font-bold text-destructive/70 uppercase tracking-wider leading-none">
+                                                {error.source}
+                                            </span>
+                                        )}
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[11px] text-destructive font-mono leading-relaxed break-words whitespace-pre-wrap">
+                                                {preview}
+                                            </span>
+                                            {isTruncated && (
+                                                <button
+                                                    onClick={() => handleViewMore(error)}
+                                                    className="text-[10px] text-primary hover:text-primary/80 underline self-start transition-colors"
+                                                >
+                                                    View More
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </ScrollArea>
             </CollapsibleContent>
+
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetContent side="right" className="w-full sm:max-w-lg">
+                    <SheetHeader>
+                        <SheetTitle className="flex items-center gap-2">
+                            <AlertCircle size={16} className="text-destructive" />
+                            Error Details
+                        </SheetTitle>
+                        {selectedError && (
+                            <SheetDescription>
+                                {selectedError.source && (
+                                    <div className="text-xs font-semibold text-destructive/70 uppercase tracking-wider mb-2">
+                                        {selectedError.source}
+                                    </div>
+                                )}
+                                {selectedError.line && (
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                        Line {selectedError.line}
+                                    </div>
+                                )}
+                            </SheetDescription>
+                        )}
+                    </SheetHeader>
+                    {selectedError && (
+                        <div className="mt-4 p-4 bg-destructive/5 rounded-lg border border-destructive/20">
+                            <div className="text-sm font-mono text-destructive whitespace-pre-wrap break-words">
+                                {selectedError.message}
+                            </div>
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
         </Collapsible>
     );
 };

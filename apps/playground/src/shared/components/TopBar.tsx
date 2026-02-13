@@ -5,9 +5,10 @@ import {
     useGlobalStore,
     useSimulationStore,
 } from "@/shared/store";
-import { Check, Download, Loader2, Moon, Play, RotateCcw, Save, Sun } from "lucide-react";
+import { Check, Code2, Download, Loader2, Moon, Play, RotateCcw, Save, Sun } from "lucide-react";
 import React, { useState } from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { DevTools } from "./DevTools";
 import { ExportDialog } from "./ExportDialog";
 
 export const TopBar: React.FC = () => {
@@ -26,6 +27,7 @@ export const TopBar: React.FC = () => {
     const [showSaved, setShowSaved] = useState(false);
     const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
     const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+    const [isDevToolsOpen, setIsDevToolsOpen] = useState(false);
 
     const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
     const dirty = isAnyDirty();
@@ -54,6 +56,15 @@ export const TopBar: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsDevToolsOpen(true)}
+                    title="Open DevTools"
+                >
+                    <Code2 size={18} />
+                </Button>
+
                 <Button
                     variant="ghost"
                     size="icon"
@@ -142,6 +153,8 @@ export const TopBar: React.FC = () => {
                 onClose={() => setIsExportDialogOpen(false)}
                 workspace={activeWorkspace}
             />
+
+            <DevTools isOpen={isDevToolsOpen} onClose={() => setIsDevToolsOpen(false)} />
         </div>
     );
 };

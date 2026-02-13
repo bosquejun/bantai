@@ -1,4 +1,4 @@
-import type { editor } from "monaco-editor";
+import { editor } from "monaco-editor";
 
 export const defaultEditorOptions: editor.IStandaloneEditorConstructionOptions = {
     lineNumbers: "on",
@@ -17,4 +17,7 @@ export const defaultEditorOptions: editor.IStandaloneEditorConstructionOptions =
     overviewRulerBorder: false,
     hideCursorInOverviewRuler: true,
     automaticLayout: true,
+    lightbulb: {
+        enabled: editor.ShowLightbulbIconMode.Off,
+    },
 };

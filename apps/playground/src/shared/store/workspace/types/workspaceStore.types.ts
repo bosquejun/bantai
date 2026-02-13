@@ -26,6 +26,7 @@ export interface WorkspaceStore {
     addWorkspace: (name: string) => void;
     updateWorkspace: (id: string, updates: Partial<Workspace>) => void;
     updateContext: (id: string, context: string) => void;
+    setWorkspaceErrors: (id: string, errors: BantaiError[]) => void;
     deleteWorkspace: (id: string) => void;
     setActiveWorkspace: (id: string) => void;
 
