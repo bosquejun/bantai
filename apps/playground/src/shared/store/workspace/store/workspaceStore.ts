@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { BantaiError } from "../../../types";
@@ -19,7 +20,7 @@ export function getWorkspacePath(workspaceId: string, folder?: string): string {
 }
 
 const createDefaultWorkspace = (name: string): Workspace => ({
-    id: crypto.randomUUID(),
+    id: nanoid(),
     name,
     context: DEFAULT_CONTEXT_DEF,
     rules: [

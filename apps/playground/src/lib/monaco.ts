@@ -38,7 +38,7 @@ export async function initMonaco() {
                 // 3. Breaks chained methods (like .string().optional()) onto new lines
                 break_chained_methods: true,
                 // 4. Ensures the final closing char is handled correctly
-                end_with_newline: true,
+                // end_with_newline: true,
             });
 
             return [

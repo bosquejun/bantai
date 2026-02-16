@@ -43,6 +43,8 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
     const setWorkspaceErrors = useWorkspaceStore((state) => state.setWorkspaceErrors);
     const snapshots = useWorkspaceStore((state) => state.snapshots);
     const isUserTypingRef = useRef(false);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastUserValueRef = useRef<string>("");
 
     // Check if context specifically is dirty (not just workspace)
     const isContextDirty = useMemo(() => {
@@ -95,9 +97,9 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
 
             const codeValue = code || "";
 
-            // Update context in store
-            if (activeWorkspaceId) {
-                updateContext(activeWorkspaceId, codeValue);
+            // Skip compilation if user is still typing
+            if (isUserTypingRef.current) {
+                return;
             }
 
             // Transpile and collect errors
@@ -108,12 +110,11 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
 
             // Update file model and type declarations
             updateFileModelAndTypes(codeValue);
-        }, 750),
+        }, 1000),
         [
             monaco,
             editorRef,
             activeWorkspaceId,
-            updateContext,
             collectAndSetErrors,
             updateFileModelAndTypes,
         ]
@@ -151,14 +152,22 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
         const currentValue = model.getValue();
         const workspaceValue = activeWorkspace.context || "";
 
-        // Only update if the values differ to avoid unnecessary updates
-        if (currentValue !== workspaceValue) {
+        // Only update if the values differ AND the workspace value is different from
+        // the last user value (meaning it's a programmatic update like discard, not from user typing)
+        // This prevents the workspace update from overriding user input
+        if (currentValue !== workspaceValue && workspaceValue !== lastUserValueRef.current) {
             // Use requestAnimationFrame to ensure React has updated the workspace state
             requestAnimationFrame(() => {
-                if (!editorRef.current) return;
+                if (!editorRef.current || isUserTypingRef.current) return;
 
                 const modelAfterUpdate = editorRef.current.getModel();
                 if (!modelAfterUpdate) return;
+
+                // Double-check the value hasn't changed due to user input
+                if (modelAfterUpdate.getValue() !== currentValue) {
+                    // User has typed something, don't override
+                    return;
+                }
 
                 // Set the value and move cursor to end
                 modelAfterUpdate.setValue(workspaceValue);
@@ -167,6 +176,9 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                     lineNumber: lineCount,
                     column: modelAfterUpdate.getLineMaxColumn(lineCount),
                 });
+
+                // Update the last user value reference
+                lastUserValueRef.current = workspaceValue;
 
                 // Trigger transpile to update errors (debounced, so safe to call)
                 handleTranspile(workspaceValue);
@@ -245,6 +257,15 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
         // the editor's onMount handler once the editor is fully ready.
     }, [monaco, ensureFileModel]);
 
+    // Cleanup typing timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const handleEditorDidMount: OnMount = (editor) => {
         if (!monaco) return;
         editorRef.current = editor;
@@ -279,6 +300,7 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
         // We also ensure the background file model exists before transpiling.
         const initialContext = activeWorkspace?.context || "";
         if (initialContext && ensureFileModel()) {
+            lastUserValueRef.current = initialContext;
             handleTranspile(initialContext);
         }
     };
@@ -374,12 +396,36 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({
                         <Editor
                             value={activeWorkspace?.context || ""}
                             onChange={(value) => {
+                                // Clear any existing timeout
+                                if (typingTimeoutRef.current) {
+                                    clearTimeout(typingTimeoutRef.current);
+                                }
+
+                                const codeValue = value || "";
+
+                                // Update the last user value reference immediately
+                                lastUserValueRef.current = codeValue;
+
+                                // Update workspace state immediately to keep Editor in sync
+                                // This prevents React from restoring the old value
+                                if (activeWorkspaceId) {
+                                    updateContext(activeWorkspaceId, codeValue);
+                                }
+
+                                // Mark that user is typing
                                 isUserTypingRef.current = true;
-                                handleTranspile(value || "");
-                                // Reset flag after a short delay
-                                setTimeout(() => {
+
+                                // Trigger debounced transpile (will be cancelled if user keeps typing)
+                                handleTranspile(codeValue);
+
+                                // Reset typing flag after user stops typing for 800ms
+                                // This ensures compilation doesn't happen while user is actively typing
+                                // Using 800ms (less than 1000ms debounce) ensures typing flag is cleared
+                                // before the debounced function executes
+                                typingTimeoutRef.current = setTimeout(() => {
                                     isUserTypingRef.current = false;
-                                }, 50);
+                                    typingTimeoutRef.current = null;
+                                }, 800);
                             }}
                             options={defaultEditorOptions}
                             onMount={handleEditorDidMount}

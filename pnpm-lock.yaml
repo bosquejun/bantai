@@ -141,6 +141,9 @@ importers:
       monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
+      nanoid:
+        specifier: ^5.1.6
+        version: 5.1.6
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

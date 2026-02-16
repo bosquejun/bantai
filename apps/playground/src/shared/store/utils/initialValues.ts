@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import type { Policy, Rule } from "../../types";
 import { lintCode } from "./linting";
 
@@ -28,7 +29,7 @@ export const INITIAL_RULE = (name: string, customCode?: string): Rule => {
                 ""
             )} = defineRule(appContext, "${name}", async (input, ctx) => {\n  return input.role === 'admin';\n});`;
     return {
-        id: crypto.randomUUID(),
+        id: nanoid(),
         name,
         code,
         enabled: true,
@@ -42,7 +43,7 @@ export const INITIAL_POLICY = (
     rules: string[] = ["is-admin"],
     effect: "ALLOW" | "DENY" = "ALLOW"
 ): Policy => ({
-    id: crypto.randomUUID(),
+    id: nanoid(),
     name,
     code: `const ${name
         .split("-")

@@ -100,6 +100,8 @@ const RuleItem: React.FC<RuleItemProps> = ({
             if (fileModel?.current) {
                 fileModel?.current?.setValue(wrappedCode);
 
+                // await handleExecute(wrappedCode);
+
                 // Transpile the wrapped model (not the editor model) to get errors
                 // The wrapped model has the import statement and proper structure for type checking
                 const { errors, transpiledCodes } = await transpileCode(monaco, editorRef.current);

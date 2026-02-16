@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import type { StateCreator } from "zustand";
 import type { Context } from "../../types";
 import { DEFAULT_CONTEXT_DEF, INITIAL_POLICY, INITIAL_RULE } from "../utils/initialValues";
@@ -16,6 +17,8 @@ export interface ContextSlice {
     setActiveContext: (id: string) => void;
 }
 
+const defaultContextId = nanoid();
+
 export const createContextSlice: StateCreator<
     BantaiState,
     [],
@@ -24,7 +27,7 @@ export const createContextSlice: StateCreator<
 > = (set) => ({
     contexts: [
         {
-            id: "default-context",
+            id: defaultContextId,
             name: "Main App",
             definition: DEFAULT_CONTEXT_DEF,
             rules: [
@@ -48,11 +51,11 @@ export const createContextSlice: StateCreator<
         },
     ],
     snapshots: {},
-    activeContextId: "default-context",
+    activeContextId: defaultContextId,
 
     addContext: (name) =>
         set((state) => {
-            const id = crypto.randomUUID();
+            const id = nanoid();
             const newContext: Context = {
                 id,
                 name,
