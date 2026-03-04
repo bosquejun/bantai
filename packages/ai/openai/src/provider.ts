@@ -39,6 +39,33 @@ export const openai = (model: ChatModel, options?: OpenAiOptions) => {
                 providerResponse: response,
             };
         },
+        async *streamText(input) {
+            const messages: ResponseInput = convertPromptToOpenAIMessages(input.llm.prompt);
+
+            const stream = await openaiClient.responses.create({
+                model: input.llm.model || model,
+                input: messages,
+                stream: true,
+            });
+
+            for await (const event of stream) {
+                if (event.type === "response.output_text.delta") {
+                    yield {
+                        text: event.delta,
+                        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+                    };
+                } else if (event.type === "response.completed") {
+                    yield {
+                        text: "",
+                        usage: {
+                            inputTokens: event.response.usage?.input_tokens || 0,
+                            outputTokens: event.response.usage?.output_tokens || 0,
+                            totalTokens: event.response.usage?.total_tokens || 0,
+                        },
+                    };
+                }
+            }
+        },
     };
     return adapter;
 };
